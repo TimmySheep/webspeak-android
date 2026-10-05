@@ -35,11 +35,18 @@ class GatewayApiTest {
 
     @Test
     fun rejectsPathCredentialsAndQueryValues() {
+        val subpath = assertThrows(GatewayException::class.java) {
+            api.parseGatewayUrl("https://voice.example.com/client")
+        }
+        assertEquals("INVALID_GATEWAY_SUBPATH", subpath.code)
+
         listOf(
-            "https://voice.example.com/client",
             "https://name:password@voice.example.com",
             "https://voice.example.com/?token=secret",
             "https://voice.example.com/#fragment",
-        ).forEach { input -> assertThrows(GatewayException::class.java) { api.parseGatewayUrl(input) } }
+        ).forEach { input ->
+            val error = assertThrows(GatewayException::class.java) { api.parseGatewayUrl(input) }
+            assertEquals("INVALID_GATEWAY_CREDENTIALS", error.code)
+        }
     }
 }

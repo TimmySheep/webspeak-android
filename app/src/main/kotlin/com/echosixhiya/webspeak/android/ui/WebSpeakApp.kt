@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import com.echosixhiya.webspeak.android.R
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.echosixhiya.webspeak.android.data.VoiceSessionStore
@@ -58,7 +59,7 @@ fun WebSpeakApp() {
         if (microphoneGranted && request != null) {
             VoiceSessionService.connect(context, request)
         } else if (!microphoneGranted) {
-            scope.launch { snackbarHostState.showSnackbar("需要麦克风权限才能加入语音频道") }
+            scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.error_microphone_permission)) }
         }
     }
 

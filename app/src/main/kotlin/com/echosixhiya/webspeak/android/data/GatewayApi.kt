@@ -108,10 +108,10 @@ class GatewayApi(
         val url = normalized.toHttpUrlOrNull()
             ?: throw GatewayException("INVALID_GATEWAY_URL", "请输入有效的 WebSpeak 网关地址")
         if (url.encodedPath != "/" && url.encodedPath.isNotBlank()) {
-            throw GatewayException("INVALID_GATEWAY_URL", "网关地址暂不支持子路径，请填写站点根地址")
+            throw GatewayException("INVALID_GATEWAY_SUBPATH", "网关地址暂不支持子路径，请填写站点根地址")
         }
         if (url.username.isNotEmpty() || url.password.isNotEmpty() || url.query != null || url.fragment != null) {
-            throw GatewayException("INVALID_GATEWAY_URL", "网关地址不能包含账号、密码、查询参数或片段")
+            throw GatewayException("INVALID_GATEWAY_CREDENTIALS", "网关地址不能包含账号、密码、查询参数或片段")
         }
         if (url.scheme != "https") {
             throw GatewayException("INSECURE_GATEWAY_URL", "为保护连接票据、身份数据、聊天和语音，网关必须使用有效 HTTPS 证书")
