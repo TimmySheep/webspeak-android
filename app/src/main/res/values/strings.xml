@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">WebSpeak</string>
+    <string name="favorite_add">收藏当前服务器</string>
+    <string name="favorite_update">更新收藏</string>
+    <string name="favorites_title">收藏的服务器</string>
+    <string name="favorites_privacy">仅保存网关、服务器地址和昵称；不会保存密码、邀请 Token 或身份材料。</string>
+    <string name="favorite_delete">删除收藏</string>
+    <string name="favorite_gateway_invalid">收藏需要有效的 HTTPS 网关根地址。</string>
+    <string name="screen_share_requesting">正在申请屏幕共享权限…</string>
+    <string name="screen_share_privacy_warning">共享后，当前频道中的所有成员都可能发现并观看你的画面。</string>
+    <string name="screen_share_confirm_title">开始屏幕共享？</string>
+    <string name="screen_share_confirm_body">共享后，当前频道中的所有成员都可能发现并观看你的画面。</string>
+    <string name="screen_share_confirm_continue">继续</string>
+    <string name="screen_share_confirm_cancel">取消</string>
+    <string name="screen_share_media_limit">目前只分享画面，不包含设备播放的声音。</string>
+    <string name="notification_channel_voice">语音连接</string>
+    <string name="notification_voice_connecting">正在连接语音服务器</string>
+    <string name="notification_voice_connected">语音连接已保持</string>
+    <string name="notification_connected_to_channel">已连接到%1$s频道</string>
+    <string name="notification_disconnect">断开</string>
+    <string name="notification_mute">静音</string>
+    <string name="notification_unmute">取消静音</string>
+</resources>

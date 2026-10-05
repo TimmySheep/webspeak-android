@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">WebSpeak</string>
+    <string name="favorite_add">Server zu Favoriten hinzufügen</string>
+    <string name="favorite_update">Favorit aktualisieren</string>
+    <string name="favorites_title">Favorisierte Server</string>
+    <string name="favorites_privacy">Gespeichert werden nur Gateway, Serveradresse und Nickname. Passwörter, Einladungstokens und Identitätsdaten werden nicht gespeichert.</string>
+    <string name="favorite_delete">Favorit entfernen</string>
+    <string name="favorite_gateway_invalid">Zum Speichern eines Favoriten ist eine gültige HTTPS-Gateway-Adresse erforderlich.</string>
+    <string name="screen_share_requesting">Berechtigung zur Bildschirmfreigabe wird angefordert…</string>
+    <string name="screen_share_privacy_warning">Nach Beginn der Freigabe können alle Mitglieder deines aktuellen Kanals deinen Bildschirm möglicherweise finden und ansehen.</string>
+    <string name="screen_share_confirm_title">Bildschirmfreigabe starten?</string>
+    <string name="screen_share_confirm_body">Nach Beginn der Freigabe können alle Mitglieder deines aktuellen Kanals deinen Bildschirm möglicherweise finden und ansehen.</string>
+    <string name="screen_share_confirm_continue">Weiter</string>
+    <string name="screen_share_confirm_cancel">Abbrechen</string>
+    <string name="screen_share_media_limit">Es wird nur der Bildschirm geteilt, nicht der Gerätewiedergabeton.</string>
+    <string name="notification_channel_voice">Sprachverbindung</string>
+    <string name="notification_voice_connecting">Verbindung zum Sprachserver wird hergestellt</string>
+    <string name="notification_voice_connected">Sprachverbindung ist aktiv</string>
+    <string name="notification_connected_to_channel">Mit dem Kanal %1$s verbunden</string>
+    <string name="notification_disconnect">Trennen</string>
+    <string name="notification_mute">Stummschalten</string>
+    <string name="notification_unmute">Stummschaltung aufheben</string>
+</resources>

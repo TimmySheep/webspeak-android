@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">WebSpeak</string>
+    <string name="favorite_add">Добавить сервер в избранное</string>
+    <string name="favorite_update">Обновить избранное</string>
+    <string name="favorites_title">Избранные серверы</string>
+    <string name="favorites_privacy">Сохраняются только шлюз, адрес сервера и имя. Пароли, токены приглашения и данные идентификатора не сохраняются.</string>
+    <string name="favorite_delete">Удалить из избранного</string>
+    <string name="favorite_gateway_invalid">Для сохранения нужен корректный корневой HTTPS-адрес шлюза.</string>
+    <string name="screen_share_requesting">Запрос разрешения на показ экрана…</string>
+    <string name="screen_share_privacy_warning">После начала трансляции участники текущего канала могут обнаружить и посмотреть ваш экран.</string>
+    <string name="screen_share_confirm_title">Начать показ экрана?</string>
+    <string name="screen_share_confirm_body">После начала трансляции участники текущего канала могут обнаружить и посмотреть ваш экран.</string>
+    <string name="screen_share_confirm_continue">Продолжить</string>
+    <string name="screen_share_confirm_cancel">Отмена</string>
+    <string name="screen_share_media_limit">Передаётся только изображение экрана, без звука устройства.</string>
+    <string name="notification_channel_voice">Голосовое подключение</string>
+    <string name="notification_voice_connecting">Подключение к голосовому серверу</string>
+    <string name="notification_voice_connected">Голосовое подключение активно</string>
+    <string name="notification_connected_to_channel">Подключено к каналу «%1$s»</string>
+    <string name="notification_disconnect">Отключить</string>
+    <string name="notification_mute">Отключить микрофон</string>
+    <string name="notification_unmute">Включить микрофон</string>
+</resources>

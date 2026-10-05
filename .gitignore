@@ -1,0 +1,17 @@
+.gradle/
+**/build/
+local.properties
+*.iml
+.idea/
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+*.jks
+*.keystore
+secrets.properties
+
+# Local collaboration instructions and development records are not part of the public repo.
+/AGENTS.md
+/logs/
+/taskbook/

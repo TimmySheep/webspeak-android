@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">WebSpeak</string>
+    <string name="favorite_add">Add server to favorites</string>
+    <string name="favorite_update">Update favorite</string>
+    <string name="favorites_title">Favorite servers</string>
+    <string name="favorites_privacy">Only the gateway, server address, and nickname are saved. Passwords, invitation tokens, and identity data are not saved.</string>
+    <string name="favorite_delete">Remove favorite</string>
+    <string name="favorite_gateway_invalid">A valid HTTPS gateway root URL is required to save a favorite.</string>
+    <string name="screen_share_requesting">Requesting screen-sharing permission…</string>
+    <string name="screen_share_privacy_warning">After sharing starts, everyone in your current channel may discover and watch your screen.</string>
+    <string name="screen_share_confirm_title">Start screen sharing?</string>
+    <string name="screen_share_confirm_body">After sharing starts, everyone in your current channel may discover and watch your screen.</string>
+    <string name="screen_share_confirm_continue">Continue</string>
+    <string name="screen_share_confirm_cancel">Cancel</string>
+    <string name="screen_share_media_limit">Only the screen is shared; device playback audio is not included.</string>
+    <string name="notification_channel_voice">Voice session</string>
+    <string name="notification_voice_connecting">Connecting to voice server</string>
+    <string name="notification_voice_connected">Voice session is active</string>
+    <string name="notification_connected_to_channel">Connected to %1$s channel</string>
+    <string name="notification_disconnect">Disconnect</string>
+    <string name="notification_mute">Mute</string>
+    <string name="notification_unmute">Unmute</string>
+</resources>

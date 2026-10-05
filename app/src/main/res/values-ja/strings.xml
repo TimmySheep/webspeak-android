@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">WebSpeak</string>
+    <string name="favorite_add">サーバーをお気に入りに追加</string>
+    <string name="favorite_update">お気に入りを更新</string>
+    <string name="favorites_title">お気に入りのサーバー</string>
+    <string name="favorites_privacy">保存するのはゲートウェイ、サーバーアドレス、ニックネームのみです。パスワード、招待トークン、ID情報は保存されません。</string>
+    <string name="favorite_delete">お気に入りから削除</string>
+    <string name="favorite_gateway_invalid">お気に入りの保存には有効なHTTPSゲートウェイのルートURLが必要です。</string>
+    <string name="screen_share_requesting">画面共有の許可をリクエスト中…</string>
+    <string name="screen_share_privacy_warning">共有を開始すると、現在のチャンネルのメンバー全員が画面を見つけて視聴できる場合があります。</string>
+    <string name="screen_share_confirm_title">画面共有を開始しますか？</string>
+    <string name="screen_share_confirm_body">共有を開始すると、現在のチャンネルのメンバー全員が画面を見つけて視聴できる場合があります。</string>
+    <string name="screen_share_confirm_continue">続行</string>
+    <string name="screen_share_confirm_cancel">キャンセル</string>
+    <string name="screen_share_media_limit">共有されるのは画面のみで、端末の再生音は含まれません。</string>
+    <string name="notification_channel_voice">音声セッション</string>
+    <string name="notification_voice_connecting">音声サーバーに接続中</string>
+    <string name="notification_voice_connected">音声接続中</string>
+    <string name="notification_connected_to_channel">%1$sチャンネルに接続しました</string>
+    <string name="notification_disconnect">切断</string>
+    <string name="notification_mute">ミュート</string>
+    <string name="notification_unmute">ミュート解除</string>
+</resources>
