@@ -94,6 +94,7 @@ fun WebSpeakApp() {
                 onMemberVolume = { clientId, volume -> VoiceSessionService.setMemberVolume(context, clientId, volume) },
                 onMoveMember = { clientId, channelId -> VoiceSessionService.moveMember(context, clientId, channelId) },
                 onOutputVolume = { volume -> VoiceSessionService.setOutputVolume(context, volume) },
+                onToggleSpeaker = { VoiceSessionService.toggleSpeaker(context) },
                 onLatencyProbe = { VoiceSessionService.requestLatency(context) },
                 onClearChatHistory = { VoiceSessionService.clearChatHistory(context) },
                 onStartScreenShare = ::requestScreenCapture,

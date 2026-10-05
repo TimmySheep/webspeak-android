@@ -25,14 +25,18 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.CallEnd
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speaker
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.WifiTethering
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AlertDialog
@@ -41,10 +45,10 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -115,6 +119,7 @@ fun VoiceWorkspaceScreen(
     onMemberVolume: (Int, Float) -> Unit,
     onMoveMember: (Int, String) -> Unit,
     onOutputVolume: (Float) -> Unit,
+    onToggleSpeaker: () -> Unit,
     onLatencyProbe: () -> Unit,
     onClearChatHistory: () -> Unit,
     onStartScreenShare: () -> Unit,
@@ -133,23 +138,6 @@ fun VoiceWorkspaceScreen(
         val useNavigationRail = maxWidth >= 600.dp
         Scaffold(
             contentWindowInsets = WindowInsets.safeDrawing,
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("TeamSpeak", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                            Text(
-                                when (state.phase) {
-                                    ConnectionPhase.Reconnecting -> stringResource(R.string.error_reconnecting_short)
-                                    else -> currentChannel?.name ?: stringResource(R.string.workspace_voice_channel)
-                                },
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (state.phase == ConnectionPhase.Reconnecting) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    },
-                )
-            },
             bottomBar = {
                 if (!useNavigationRail) {
                     NavigationBar {
@@ -186,6 +174,7 @@ fun VoiceWorkspaceScreen(
                             state = state,
                             currentChannel = currentChannel,
                             onToggleMicrophone = onToggleMicrophone,
+                            onToggleSpeaker = onToggleSpeaker,
                             onSetAway = onSetAway,
                             onSwitchToChannels = { selectedTab = ClientTab.Channels },
                             onWhisperActive = onWhisperActive,
@@ -301,6 +290,7 @@ private fun VoiceHomeContent(
     state: VoiceSessionState,
     currentChannel: VoiceChannel?,
     onToggleMicrophone: () -> Unit,
+    onToggleSpeaker: () -> Unit,
     onSetAway: (Boolean) -> Unit,
     onSwitchToChannels: () -> Unit,
     onWhisperActive: (Boolean) -> Unit,
@@ -317,7 +307,7 @@ private fun VoiceHomeContent(
     val currentMembers = currentChannel?.members?.ifEmpty { state.members } ?: state.members
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 24.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 20.dp, end = 20.dp, top = 0.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(15.dp),
     ) {
         if (state.phase == ConnectionPhase.Reconnecting) {
@@ -342,38 +332,53 @@ private fun VoiceHomeContent(
                              Text(currentChannel?.name ?: stringResource(R.string.workspace_waiting_channel), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                              Text(pluralStringResource(R.plurals.member_count, currentMembers.size, currentMembers.size), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
                         }
-                        Box(Modifier.size(52.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Filled.Headphones, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(27.dp))
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        FilledTonalIconButton(onClick = onToggleSpeaker, modifier = Modifier.size(52.dp)) {
+                            Icon(
+                                if (state.speakerEnabled) Icons.Filled.VolumeUp else Icons.Filled.VolumeOff,
+                                contentDescription = stringResource(if (state.speakerEnabled) R.string.notification_playback_off else R.string.notification_playback_on),
+                            )
+                        }
+                        FilledTonalIconButton(onClick = onToggleMicrophone, enabled = state.speakerEnabled, modifier = Modifier.size(52.dp)) {
+                            Icon(
+                                if (state.microphoneMuted) Icons.Filled.MicOff else Icons.Filled.Mic,
+                                contentDescription = stringResource(if (state.microphoneMuted) R.string.action_unmute else R.string.action_mute),
+                            )
+                        }
+                        FilledTonalIconButton(onClick = onSwitchToChannels, modifier = Modifier.size(52.dp)) {
+                            Icon(Icons.Filled.Groups, contentDescription = stringResource(R.string.action_switch_channel))
+                        }
+                        FilledTonalIconButton(onClick = { onSetAway(!state.away) }, modifier = Modifier.size(52.dp)) {
+                            Icon(
+                                if (state.away) Icons.Filled.Person else Icons.Filled.AccessTime,
+                                contentDescription = stringResource(if (state.away) R.string.settings_return else R.string.settings_set_away),
+                            )
                         }
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        FilledTonalButton(onClick = onToggleMicrophone, enabled = state.speakerEnabled, shape = RoundedCornerShape(16.dp)) {
-                            Icon(if (state.microphoneMuted) Icons.Filled.MicOff else Icons.Filled.Mic, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                             Text(stringResource(if (state.microphoneMuted) R.string.action_unmute else R.string.action_mute))
-                        }
-                        TextButton(onClick = onSwitchToChannels) { Text(stringResource(R.string.action_switch_channel)) }
-                        TextButton(onClick = { onSetAway(!state.away) }) {
-                            Text(stringResource(if (state.away) R.string.settings_return else R.string.settings_set_away))
-                        }
-                    }
-                    if (state.whisperTargetIds.isNotEmpty()) {
-                        FilledTonalButton(
-                            onClick = {},
-                            modifier = Modifier.pointerInput(state.whisperTargetIds) {
-                                detectTapGestures(onPress = {
-                                    onWhisperActive(true)
-                                    tryAwaitRelease()
-                                    onWhisperActive(false)
-                                })
-                            },
-                            shape = RoundedCornerShape(16.dp),
-                        ) {
-                            Icon(Icons.Filled.Headphones, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                             Text(stringResource(if (state.whisperActive) R.string.whisper_active else R.string.whisper_hold))
-                        }
-                    }
+                }
+            }
+        }
+        if (state.whisperTargetIds.isNotEmpty()) {
+            item {
+                FilledTonalButton(
+                    onClick = {},
+                    modifier = Modifier.fillMaxWidth().pointerInput(state.whisperTargetIds) {
+                        detectTapGestures(onPress = {
+                            onWhisperActive(true)
+                            tryAwaitRelease()
+                            onWhisperActive(false)
+                        })
+                    },
+                    shape = RoundedCornerShape(16.dp),
+                ) {
+                    Icon(Icons.Filled.Headphones, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(if (state.whisperActive) R.string.whisper_active else R.string.whisper_hold))
                 }
             }
         }

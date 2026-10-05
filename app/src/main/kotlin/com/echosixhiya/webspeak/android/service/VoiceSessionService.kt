@@ -1582,6 +1582,8 @@ class VoiceSessionService : Service() {
             putExtra(EXTRA_VOLUME, volume)
         }
 
+        fun toggleSpeaker(context: Context) = startCommand(context, ACTION_TOGGLE_SPEAKER)
+
         fun requestLatency(context: Context) = startCommand(context, ACTION_LATENCY_PROBE)
 
         fun clearChatHistory(context: Context) = startCommand(context, ACTION_CLEAR_CHAT_HISTORY)
