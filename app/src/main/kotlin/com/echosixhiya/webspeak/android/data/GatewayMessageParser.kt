@@ -17,21 +17,21 @@ object GatewayMessageParser {
         return runCatching { JSONObject(raw) }.getOrNull()
     }
 
-    fun members(array: JSONArray?, selfId: Int = 0): List<VoiceMember> = buildList {
+    fun members(array: JSONArray?, selfId: Int = 0, unknownUser: String = "Unknown user"): List<VoiceMember> = buildList {
         if (array == null) return@buildList
         for (index in 0 until array.length().coerceAtMost(MAX_MEMBERS)) {
             val item = array.optJSONObject(index) ?: continue
             val id = item.optInt("id", 0)
             if (id <= 0) continue
-            add(member(item, selfId))
+            add(member(item, selfId, unknownUser))
         }
     }
 
-    fun member(item: JSONObject, selfId: Int = 0): VoiceMember {
+    fun member(item: JSONObject, selfId: Int = 0, unknownUser: String = "Unknown user"): VoiceMember {
         val id = item.optInt("id", 0)
         return VoiceMember(
             id = id,
-            nickname = item.optString("nickname", "未知用户").take(120).ifBlank { "未知用户" },
+            nickname = item.optString("nickname", unknownUser).take(120).ifBlank { unknownUser },
             uid = item.optString("uid", "").take(256),
             channelId = item.stringValue("channelID", "channelId").take(32),
             avatar = item.optString("avatar", "").take(MAX_AVATAR_CHARS).ifBlank { null },
@@ -43,7 +43,12 @@ object GatewayMessageParser {
         )
     }
 
-    fun channels(array: JSONArray?, selfId: Int = 0): List<VoiceChannel> {
+    fun channels(
+        array: JSONArray?,
+        selfId: Int = 0,
+        unknownUser: String = "Unknown user",
+        unnamedChannel: String = "Unnamed channel",
+    ): List<VoiceChannel> {
         val parsed = buildList {
             if (array == null) return@buildList
             for (index in 0 until array.length().coerceAtMost(MAX_CHANNELS)) {
@@ -55,9 +60,9 @@ object GatewayMessageParser {
                     id = id,
                     parentId = item.stringValue("parentID", "parentId").ifBlank { "0" }.take(32),
                     order = item.stringValue("order").take(32).ifBlank { "0" },
-                    name = item.optString("name", "未命名频道").take(120).ifBlank { "未命名频道" },
+                    name = item.optString("name", unnamedChannel).take(120).ifBlank { unnamedChannel },
                     topic = item.optString("description", "").take(500),
-                    members = members(item.optJSONArray("members"), selfId),
+                    members = members(item.optJSONArray("members"), selfId, unknownUser),
                 ),
             )
             }
@@ -123,7 +128,7 @@ object GatewayMessageParser {
         return ordered
     }
 
-    fun message(item: JSONObject, selfId: Int = 0): ChatMessage? {
+    fun message(item: JSONObject, selfId: Int = 0, unknownUser: String = "Unknown user"): ChatMessage? {
         val message = item.optString("message", "").take(500)
         if (message.isBlank()) return null
         val senderId = item.optInt("invokerId", item.optInt("senderId", 0)).takeIf { it > 0 }
@@ -140,7 +145,7 @@ object GatewayMessageParser {
             targetId = rawTargetId?.takeUnless { it == "0" },
             conversationId = if (scope == ChatScope.Private) senderId?.toString() else null,
             senderId = senderId,
-            senderName = item.optString("invokerName", item.optString("senderName", "Unknown")).take(120),
+            senderName = item.optString("invokerName", item.optString("senderName", unknownUser)).take(120),
             message = message,
             timestamp = item.optLong("timestamp", System.currentTimeMillis()),
             isSelf = senderId != null && senderId == selfId,
@@ -159,7 +164,11 @@ object GatewayMessageParser {
         )
     }
 
-    fun screenShares(array: JSONArray?): List<ScreenShareStream> = buildList {
+    fun screenShares(
+        array: JSONArray?,
+        unknownUser: String = "Unknown user",
+        screenShareName: String = "Screen share",
+    ): List<ScreenShareStream> = buildList {
         if (array == null) return@buildList
         for (index in 0 until array.length().coerceAtMost(MAX_SCREEN_SHARES)) {
             val item = array.optJSONObject(index) ?: continue
@@ -172,8 +181,8 @@ object GatewayMessageParser {
                     source = item.optString("source", "browser").take(32),
                     ownerPeerId = item.optString("ownerPeerId", "").take(128),
                     ownerClientId = item.optInt("ownerClientId", 0).takeIf { it > 0 },
-                    ownerNickname = item.optString("ownerNickname", "未知用户").take(120),
-                    name = item.optString("name", "屏幕共享").take(120),
+                    ownerNickname = item.optString("ownerNickname", unknownUser).take(120),
+                    name = item.optString("name", screenShareName).take(120),
                     audio = item.optBoolean("audio", false),
                     createdAt = item.optLong("createdAt", System.currentTimeMillis()),
                     viewerCount = item.optInt("viewerCount", 0).coerceIn(0, 1000),
@@ -184,7 +193,7 @@ object GatewayMessageParser {
                             if (peerId.isNotBlank()) add(
                                 ScreenShareViewer(
                                     peerId = peerId,
-                                    nickname = viewer.optString("nickname", "未知用户").take(120),
+                                    nickname = viewer.optString("nickname", unknownUser).take(120),
                                     avatar = viewer.optString("avatar", "").take(MAX_AVATAR_CHARS).ifBlank { null },
                                 ),
                             )

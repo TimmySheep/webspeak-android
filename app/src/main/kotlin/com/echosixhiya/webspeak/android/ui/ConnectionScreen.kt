@@ -122,6 +122,8 @@ fun ConnectionScreen(
             ) {
                 BrandHero()
                 Spacer(Modifier.height(22.dp))
+                AppLanguageSelector()
+                Spacer(Modifier.height(12.dp))
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -135,10 +137,10 @@ fun ConnectionScreen(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
-                                Text("连接语音频道", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                                 Text(stringResource(R.string.connection_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                                 Spacer(Modifier.height(4.dp))
                                 Text(
-                                    "输入 WebSpeak 网关和你的昵称即可加入。",
+                                     stringResource(R.string.connection_description),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -146,14 +148,18 @@ fun ConnectionScreen(
                             Icon(Icons.Filled.Public, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         }
 
-                        if (errorMessage.isNotBlank()) {
+                         if (errorMessage.isNotBlank()) {
                             Card(
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
                                 shape = RoundedCornerShape(18.dp),
                             ) {
                                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Text("连接未完成", color = MaterialTheme.colorScheme.onErrorContainer, fontWeight = FontWeight.SemiBold)
-                                    Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodyMedium)
+                                     Text(stringResource(R.string.connection_error_heading), color = MaterialTheme.colorScheme.onErrorContainer, fontWeight = FontWeight.SemiBold)
+                                     Text(
+                                         text = localizedConnectionError(errorCode),
+                                         color = MaterialTheme.colorScheme.onErrorContainer,
+                                         style = MaterialTheme.typography.bodyMedium,
+                                     )
                                     if (errorCode.isNotBlank()) {
                                         Text(errorCode, color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.labelSmall)
                                     }
@@ -168,7 +174,7 @@ fun ConnectionScreen(
                                 gateway = it
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            label = { Text("WebSpeak 网关") },
+                             label = { Text(stringResource(R.string.connection_gateway_label)) },
                             placeholder = { Text("https://voice.example.com") },
                             leadingIcon = { Icon(Icons.Filled.CloudDone, contentDescription = null) },
                             singleLine = true,
@@ -179,8 +185,8 @@ fun ConnectionScreen(
                             value = nickname,
                             onValueChange = { nickname = it.take(30) },
                             modifier = Modifier.fillMaxWidth(),
-                            label = { Text("昵称") },
-                            placeholder = { Text("你在语音频道中的显示名称") },
+                             label = { Text(stringResource(R.string.connection_nickname_label)) },
+                             placeholder = { Text(stringResource(R.string.connection_nickname_hint)) },
                             leadingIcon = { Icon(Icons.Filled.Mic, contentDescription = null) },
                             singleLine = true,
                             enabled = !connecting,
@@ -259,14 +265,14 @@ fun ConnectionScreen(
                         ) {
                             Icon(Icons.Filled.Tune, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text(if (advancedExpanded) "收起连接选项" else "频道、密码与邀请选项")
+                             Text(stringResource(if (advancedExpanded) R.string.connection_options_collapse else R.string.connection_options_expand))
                         }
                         if (advancedExpanded) {
                             OutlinedTextField(
                                 value = channel,
                                 onValueChange = { channel = it.take(100) },
                                 modifier = Modifier.fillMaxWidth(),
-                                label = { Text("初始频道（可选）") },
+                                 label = { Text(stringResource(R.string.connection_channel_optional)) },
                                 singleLine = true,
                                 enabled = !connecting,
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
@@ -275,7 +281,7 @@ fun ConnectionScreen(
                                 value = serverPassword,
                                 onValueChange = { serverPassword = it.take(512) },
                                 modifier = Modifier.fillMaxWidth(),
-                                label = { Text("服务器密码（可选）") },
+                                 label = { Text(stringResource(R.string.connection_password_optional)) },
                                 leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null) },
                                 singleLine = true,
                                 enabled = !connecting,
@@ -286,7 +292,7 @@ fun ConnectionScreen(
                                 value = inviteToken,
                                 onValueChange = { inviteToken = it.take(128) },
                                 modifier = Modifier.fillMaxWidth(),
-                                label = { Text("邀请 Token（可选）") },
+                                 label = { Text(stringResource(R.string.connection_invite_optional)) },
                                 singleLine = true,
                                 enabled = !connecting,
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
@@ -296,8 +302,8 @@ fun ConnectionScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(checked = rememberIdentity, onCheckedChange = { rememberIdentity = it }, enabled = !connecting)
                             Column(Modifier.padding(start = 4.dp)) {
-                                Text("在此设备保留 TeamSpeak 身份", style = MaterialTheme.typography.bodyMedium)
-                                Text("身份材料将使用 Android 安全存储保护。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                 Text(stringResource(R.string.connection_remember_identity), style = MaterialTheme.typography.bodyMedium)
+                                 Text(stringResource(R.string.connection_identity_secure), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
 
@@ -323,16 +329,16 @@ fun ConnectionScreen(
                             if (connecting) {
                                 CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
                                 Spacer(Modifier.width(12.dp))
-                                Text("正在连接…")
+                                 Text(stringResource(R.string.connection_connecting))
                             } else {
-                                Text("加入语音", fontWeight = FontWeight.SemiBold)
+                                 Text(stringResource(R.string.connection_join), fontWeight = FontWeight.SemiBold)
                                 Spacer(Modifier.width(10.dp))
                                 Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
                             }
                         }
                         if (connecting) {
                             TextButton(onClick = onCancel, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                                Text("取消连接")
+                                 Text(stringResource(R.string.connection_cancel))
                             }
                         }
                     }
@@ -361,6 +367,39 @@ private fun BrandHero() {
         }
         Spacer(Modifier.height(13.dp))
         Text("WebSpeak", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, letterSpacing = (-0.4).sp)
-        Text("TeamSpeak 语音，按 Android 方式呈现", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.connection_tagline), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
+}
+
+@Composable
+private fun localizedConnectionError(code: String): String {
+    val resource = when (code.uppercase()) {
+        "MICROPHONE_PERMISSION_REQUIRED" -> R.string.error_microphone_permission
+        "GATEWAY_CONFIG_FAILED" -> R.string.error_gateway_config
+        "ORIGIN_REJECTED" -> R.string.error_origin_rejected
+        "NOT_INITIALIZED" -> R.string.error_gateway_uninitialized
+        "RATE_LIMITED" -> R.string.error_rate_limited
+        "TARGET_NOT_ALLOWED" -> R.string.error_target_not_allowed
+        "ACCELERATION_UNAVAILABLE" -> R.string.error_acceleration_unavailable
+        "INVALID_NICKNAME" -> R.string.error_invalid_nickname
+        "INVITE_INVALID" -> R.string.error_invite_invalid
+        "JOIN_TICKET_FAILED" -> R.string.error_join_ticket
+        "INVALID_GATEWAY_URL" -> R.string.error_invalid_gateway
+        "INVALID_GATEWAY_SUBPATH" -> R.string.error_gateway_subpath
+        "INVALID_GATEWAY_CREDENTIALS" -> R.string.error_gateway_credentials
+        "INSECURE_GATEWAY_URL" -> R.string.error_https_required
+        "INVALID_TARGET" -> R.string.error_invalid_target
+        "GATEWAY_HANDSHAKE_TIMEOUT" -> R.string.error_handshake_timeout
+        "GATEWAY_CONNECTION_FAILED", "GATEWAY_CONNECTION_CLOSED", "GATEWAY_NETWORK_LOST", "GATEWAY_SESSION_ENDED" -> R.string.error_gateway_connection
+        "SERVER_PASSWORD_REQUIRED" -> R.string.error_server_password_required
+        "INVALID_SERVER_PASSWORD" -> R.string.error_server_password_invalid
+        "IDENTITY_IN_USE" -> R.string.error_identity_in_use
+        "IDENTITY_REJECTED", "IDENTITY_INVALID" -> R.string.error_identity_invalid
+        "SERVER_REJECTED", "CHANNEL_FULL" -> R.string.error_server_rejected
+        "JOIN_TICKET_REQUIRED" -> R.string.error_ticket_invalid
+        "TEAM_SPEAK_CLIENT_UNAVAILABLE" -> R.string.error_teamspeak_unavailable
+        "WEBRTC_NEGOTIATION_FAILED" -> R.string.error_webrtc_negotiation
+        else -> null
+    }
+    return resource?.let { stringResource(it) } ?: stringResource(R.string.error_connection_generic)
 }

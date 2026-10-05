@@ -79,6 +79,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
@@ -139,8 +140,8 @@ fun VoiceWorkspaceScreen(
                             Text(state.gatewayName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             Text(
                                 when (state.phase) {
-                                    ConnectionPhase.Reconnecting -> "正在恢复连接"
-                                    else -> currentChannel?.name ?: "语音频道"
+                                    ConnectionPhase.Reconnecting -> stringResource(R.string.error_reconnecting_short)
+                                    else -> currentChannel?.name ?: stringResource(R.string.workspace_voice_channel)
                                 },
                                 style = MaterialTheme.typography.labelSmall,
                                 color = if (state.phase == ConnectionPhase.Reconnecting) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -155,7 +156,7 @@ fun VoiceWorkspaceScreen(
                     },
                     actions = {
                         IconButton(onClick = onDisconnect) {
-                            Icon(Icons.Filled.CallEnd, contentDescription = "断开连接", tint = MaterialTheme.colorScheme.error)
+                            Icon(Icons.Filled.CallEnd, contentDescription = stringResource(R.string.notification_disconnect), tint = MaterialTheme.colorScheme.error)
                         }
                     },
                 )
@@ -168,7 +169,7 @@ fun VoiceWorkspaceScreen(
                                 selected = selectedTab == tab,
                                 onClick = { selectedTab = tab },
                                 icon = { NavigationTabIcon(tab, state.messages.count { !it.isSelf }) },
-                                label = { Text(tab.label) },
+                                label = { Text(stringResource(tab.labelResource)) },
                                 alwaysShowLabel = true,
                             )
                         }
@@ -184,7 +185,7 @@ fun VoiceWorkspaceScreen(
                                 selected = selectedTab == tab,
                                 onClick = { selectedTab = tab },
                                 icon = { NavigationTabIcon(tab, state.messages.count { !it.isSelf }) },
-                                label = { Text(tab.label) },
+                                label = { Text(stringResource(tab.labelResource)) },
                                 alwaysShowLabel = true,
                             )
                         }
@@ -297,12 +298,12 @@ private fun NavigationTabIcon(tab: ClientTab, unread: Int) {
     }
 }
 
-private val ClientTab.label: String
+private val ClientTab.labelResource: Int
     get() = when (this) {
-        ClientTab.Voice -> "语音"
-        ClientTab.Channels -> "频道"
-        ClientTab.Chat -> "聊天"
-        ClientTab.Settings -> "设置"
+        ClientTab.Voice -> R.string.tab_voice
+        ClientTab.Channels -> R.string.tab_channels
+        ClientTab.Chat -> R.string.tab_chat
+        ClientTab.Settings -> R.string.tab_settings
     }
 
 @Composable
@@ -332,7 +333,7 @@ private fun VoiceHomeContent(
             item {
                 AssistChip(
                     onClick = {},
-                    label = { Text("连接中断，正在尝试恢复 · ${state.reconnectAttempt}") },
+                    label = { Text(stringResource(R.string.workspace_reconnecting, state.reconnectAttempt)) },
                     leadingIcon = { Icon(Icons.Filled.WifiTethering, contentDescription = null) },
                 )
             }
@@ -345,10 +346,10 @@ private fun VoiceHomeContent(
                 Column(Modifier.fillMaxWidth().padding(22.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("语音房间", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f))
+                             Text(stringResource(R.string.workspace_voice_room), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f))
                             Spacer(Modifier.height(4.dp))
-                            Text(currentChannel?.name ?: "等待频道信息", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                            Text("${currentMembers.size} 位成员 · ${state.nickname}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
+                             Text(currentChannel?.name ?: stringResource(R.string.workspace_waiting_channel), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                             Text("${pluralStringResource(R.plurals.member_count, currentMembers.size, currentMembers.size)} · ${state.nickname}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
                         }
                         Box(Modifier.size(52.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)), contentAlignment = Alignment.Center) {
                             Icon(Icons.Filled.Headphones, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(27.dp))
@@ -358,9 +359,9 @@ private fun VoiceHomeContent(
                         FilledTonalButton(onClick = onToggleMicrophone, shape = RoundedCornerShape(16.dp)) {
                             Icon(if (state.microphoneMuted) Icons.Filled.MicOff else Icons.Filled.Mic, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text(if (state.microphoneMuted) "取消静音" else "静音")
+                             Text(stringResource(if (state.microphoneMuted) R.string.action_unmute else R.string.action_mute))
                         }
-                        TextButton(onClick = onSwitchToChannels) { Text("切换频道") }
+                         TextButton(onClick = onSwitchToChannels) { Text(stringResource(R.string.action_switch_channel)) }
                     }
                     if (state.whisperTargetIds.isNotEmpty()) {
                         FilledTonalButton(
@@ -376,7 +377,7 @@ private fun VoiceHomeContent(
                         ) {
                             Icon(Icons.Filled.Headphones, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text(if (state.whisperActive) "正在私语…" else "按住私语")
+                             Text(stringResource(if (state.whisperActive) R.string.whisper_active else R.string.whisper_hold))
                         }
                     }
                 }
@@ -385,14 +386,14 @@ private fun VoiceHomeContent(
         item {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.weight(1f)) {
-                    Text("频道成员", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                    Text("正在频道中${currentMembers.count { it.speaking }} 人发言", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                     Text(stringResource(R.string.workspace_channel_members), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                     Text(pluralStringResource(R.plurals.speaking_count, currentMembers.count { it.speaking }, currentMembers.count { it.speaking }), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                AssistChip(onClick = onSwitchToChannels, label = { Text("全部频道") }, leadingIcon = { Icon(Icons.Filled.Groups, contentDescription = null) })
+                 AssistChip(onClick = onSwitchToChannels, label = { Text(stringResource(R.string.workspace_all_channels)) }, leadingIcon = { Icon(Icons.Filled.Groups, contentDescription = null) })
             }
         }
         if (currentMembers.isEmpty()) {
-            item { EmptyStateCard("还没有成员", "频道成员连接后会显示在这里。") }
+             item { EmptyStateCard(R.string.empty_no_members_title, R.string.empty_no_members_message) }
         } else {
             items(currentMembers, key = { it.id }) { member ->
                 MemberCard(
@@ -419,12 +420,12 @@ private fun VoiceHomeContent(
                         Icon(Icons.Filled.WifiTethering, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("屏幕共享", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                             Text(stringResource(R.string.screen_share_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             Text(
                                 when {
                                      state.screenShareStarting -> stringResource(R.string.screen_share_requesting)
-                                     state.activeScreenShareId.isNotBlank() -> "你正在共享屏幕"
-                                     state.watchingScreenShareId.isNotBlank() -> "正在观看屏幕共享"
+                                      state.activeScreenShareId.isNotBlank() -> stringResource(R.string.screen_share_you_are_sharing)
+                                      state.watchingScreenShareId.isNotBlank() -> stringResource(R.string.screen_share_watching)
                                       else -> stringResource(R.string.screen_share_privacy_warning)
                                  },
                                  style = MaterialTheme.typography.bodySmall,
@@ -435,18 +436,18 @@ private fun VoiceHomeContent(
                             enabled = state.phase == ConnectionPhase.Connected,
                             onClick = if (state.activeScreenShareId.isNotBlank() || state.screenShareStarting) onStopScreenShare else onStartScreenShare,
                         ) {
-                            Text(if (state.activeScreenShareId.isNotBlank() || state.screenShareStarting) "停止" else "开始")
+                             Text(stringResource(if (state.activeScreenShareId.isNotBlank() || state.screenShareStarting) R.string.action_stop else R.string.action_start))
                         }
                     }
                     if (state.screenShareError.isNotBlank()) {
-                        Text(state.screenShareError, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.error_screen_share_generic), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
         }
         if (state.screenShares.isNotEmpty()) {
             item {
-                Text("正在直播", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                 Text(stringResource(R.string.screen_share_live), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             }
             items(state.screenShares, key = { it.streamId }) { share ->
                 Card(shape = RoundedCornerShape(20.dp)) {
@@ -455,12 +456,12 @@ private fun VoiceHomeContent(
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(share.name, fontWeight = FontWeight.SemiBold)
-                            Text("${share.ownerNickname} · ${share.viewerCount} 位观众", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                             Text(pluralStringResource(R.plurals.screen_viewer_count, share.viewerCount, share.ownerNickname, share.viewerCount), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         when {
-                            share.streamId == state.activeScreenShareId -> Text("你正在共享", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium)
-                            share.streamId == state.watchingScreenShareId -> Text("正在观看", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium)
-                            else -> TextButton(onClick = { onJoinScreenShare(share.streamId) }) { Text("观看") }
+                             share.streamId == state.activeScreenShareId -> Text(stringResource(R.string.screen_share_you_sharing_short), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium)
+                             share.streamId == state.watchingScreenShareId -> Text(stringResource(R.string.screen_share_watching_short), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium)
+                             else -> TextButton(onClick = { onJoinScreenShare(share.streamId) }) { Text(stringResource(R.string.action_view)) }
                         }
                     }
                 }
@@ -486,14 +487,14 @@ private fun ScreenShareVideoDialog(
                         Text(stream.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                         Text(stream.ownerNickname, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    TextButton(onClick = onDismiss) { Text("关闭") }
+                     TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
                 }
                 Box(
                     Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(16.dp)).background(androidx.compose.ui.graphics.Color.Black),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (track == null) {
-                        Text("正在连接共享画面…", color = androidx.compose.ui.graphics.Color.White)
+                         Text(stringResource(R.string.screen_share_connecting_view), color = androidx.compose.ui.graphics.Color.White)
                     } else {
                         val renderer = remember(stream.streamId) { SurfaceViewRenderer(context) }
                         AndroidView(factory = { renderer }, modifier = Modifier.fillMaxSize())
@@ -510,7 +511,7 @@ private fun ScreenShareVideoDialog(
                     }
                 }
                 if (error.isNotBlank()) {
-                    Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.error_screen_share_generic), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
                 Text(
                     stringResource(R.string.screen_share_media_limit),
@@ -551,46 +552,46 @@ private fun MemberCard(
             }
             Spacer(Modifier.width(13.dp))
             Column(Modifier.weight(1f)) {
-                Text(if (member.isSelf) "${member.nickname}（你）" else member.nickname, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text(if (member.isSelf) stringResource(R.string.member_you_format, member.nickname) else member.nickname, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 Text(
                     when {
-                        member.speaking -> "正在发言"
-                        member.away -> "离开"
-                        member.inputMuted -> "麦克风已静音"
-                        else -> "已连接"
+                        member.speaking -> stringResource(R.string.member_speaking)
+                        member.away -> stringResource(R.string.member_away)
+                        member.inputMuted -> stringResource(R.string.member_muted)
+                        else -> stringResource(R.string.member_connected)
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            if (member.inputMuted) Icon(Icons.Filled.MicOff, contentDescription = "麦克风静音", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
-            if (member.channelCommander) Text("管理", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            if (member.inputMuted) Icon(Icons.Filled.MicOff, contentDescription = stringResource(R.string.member_muted), tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+            if (member.channelCommander) Text(stringResource(R.string.member_admin), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
             if (!member.isSelf) {
                 Box {
                     IconButton(onClick = { menuExpanded = true }) {
-                        Icon(Icons.Filled.MoreVert, contentDescription = "${member.nickname} 的操作")
+                        Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.member_options_format, member.nickname))
                     }
                     DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false; moveExpanded = false }) {
                         if (moveExpanded) {
-                            DropdownMenuItem(text = { Text("返回成员操作") }, onClick = { moveExpanded = false })
+                            DropdownMenuItem(text = { Text(stringResource(R.string.member_back_to_actions)) }, onClick = { moveExpanded = false })
                             channels.filterNot { it.id == member.channelId }.forEach { channel ->
                                 DropdownMenuItem(
-                                    text = { Text("移动到 ${channel.name}") },
+                                    text = { Text(stringResource(R.string.member_move_to_channel_format, channel.name)) },
                                     onClick = { onMove(channel.id); menuExpanded = false; moveExpanded = false },
                                 )
                             }
                         } else {
-                            DropdownMenuItem(text = { Text("发送私聊") }, onClick = { onPrivateChat(); menuExpanded = false })
-                            DropdownMenuItem(text = { Text("戳一戳") }, onClick = { onPoke(); menuExpanded = false })
+                            DropdownMenuItem(text = { Text(stringResource(R.string.member_send_private_message)) }, onClick = { onPrivateChat(); menuExpanded = false })
+                            DropdownMenuItem(text = { Text(stringResource(R.string.member_poke)) }, onClick = { onPoke(); menuExpanded = false })
                             DropdownMenuItem(
-                                text = { Text(if (whisperSelected) "移出私语目标" else "加入私语目标") },
+                                text = { Text(stringResource(if (whisperSelected) R.string.member_remove_whisper else R.string.member_add_whisper)) },
                                 onClick = { onToggleWhisper(); menuExpanded = false },
                             )
                             DropdownMenuItem(
-                                text = { Text(if (volumeExpanded) "隐藏音量调节" else "调节此成员音量") },
+                                text = { Text(stringResource(if (volumeExpanded) R.string.member_hide_volume else R.string.member_adjust_volume)) },
                                 onClick = { volumeExpanded = !volumeExpanded; menuExpanded = false },
                             )
-                            DropdownMenuItem(text = { Text("移动成员…") }, onClick = { moveExpanded = true })
+                            DropdownMenuItem(text = { Text(stringResource(R.string.member_move)) }, onClick = { moveExpanded = true })
                         }
                     }
                 }
@@ -598,7 +599,7 @@ private fun MemberCard(
         }
         if (volumeExpanded) {
             Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 14.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Speaker, contentDescription = "成员音量")
+                Icon(Icons.Filled.Speaker, contentDescription = stringResource(R.string.member_volume))
                 Slider(
                     value = member.volume.toFloat().coerceIn(0f, 4f),
                     onValueChange = onVolumeChange,
@@ -636,12 +637,12 @@ private fun ChannelsContent(
     ) {
         item {
             Column(Modifier.padding(bottom = 6.dp)) {
-                Text("频道", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-                Text("选择频道加入语音", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                 Text(stringResource(R.string.tab_channels), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                 Text(stringResource(R.string.channel_select_to_join), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         if (channels.isEmpty()) {
-            item { EmptyStateCard("正在同步频道", "收到网关目录后，频道列表会出现在这里。") }
+             item { EmptyStateCard(R.string.channel_syncing, R.string.channel_syncing_message) }
         } else {
             items(channels, key = { it.id }) { channel ->
                 val selected = channel.id == currentChannelId
@@ -659,12 +660,12 @@ private fun ChannelsContent(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(channel.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                                Text("${channel.members.size} 位成员", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                 Text(pluralStringResource(R.plurals.channel_member_count, channel.members.size, channel.members.size), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            if (selected) Text("当前", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium)
+                             if (selected) Text(stringResource(R.string.channel_current), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium)
                         }
                         if (channel.members.isEmpty()) {
-                            Text("暂无成员", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                             Text(stringResource(R.string.channel_no_members), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } else {
                             Box(Modifier.fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.outlineVariant))
                             channel.members.forEach { member ->
@@ -684,25 +685,25 @@ private fun ChannelsContent(
                                     }
                                     Column(Modifier.weight(1f)) {
                                         Text(
-                                            if (member.isSelf) "${member.nickname}（你）" else member.nickname,
+                                             if (member.isSelf) stringResource(R.string.member_you_format, member.nickname) else member.nickname,
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = if (member.speaking) FontWeight.SemiBold else FontWeight.Normal,
                                         )
                                         Text(
                                             when {
-                                                member.speaking -> "正在发言"
-                                                member.away -> "离开"
-                                                member.inputMuted -> "麦克风已静音"
-                                                else -> "已连接"
+                                                 member.speaking -> stringResource(R.string.member_speaking)
+                                                 member.away -> stringResource(R.string.member_away)
+                                                 member.inputMuted -> stringResource(R.string.member_muted)
+                                                 else -> stringResource(R.string.member_connected)
                                             },
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
                                     if (member.inputMuted) {
-                                        Icon(Icons.Filled.MicOff, contentDescription = "麦克风静音", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(17.dp))
+                                         Icon(Icons.Filled.MicOff, contentDescription = stringResource(R.string.member_muted), tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(17.dp))
                                     } else if (member.speaking) {
-                                        Icon(Icons.Filled.Mic, contentDescription = "正在发言", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(17.dp))
+                                         Icon(Icons.Filled.Mic, contentDescription = stringResource(R.string.member_speaking), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(17.dp))
                                     }
                                 }
                             }
@@ -715,12 +716,12 @@ private fun ChannelsContent(
     if (showPasswordDialog) {
         AlertDialog(
             onDismissRequest = { showPasswordDialog = false },
-            title = { Text("频道需要密码") },
+            title = { Text(stringResource(R.string.channel_password_required)) },
             text = {
                 OutlinedTextField(
                     value = channelPassword,
                     onValueChange = { channelPassword = it.take(512) },
-                    label = { Text("频道密码") },
+                    label = { Text(stringResource(R.string.channel_password_label)) },
                     singleLine = true,
                 )
             },
@@ -728,9 +729,9 @@ private fun ChannelsContent(
                 TextButton(onClick = {
                     onSelectChannel(state.pendingChannelId, channelPassword)
                     showPasswordDialog = false
-                }) { Text("加入频道") }
+                }) { Text(stringResource(R.string.channel_join)) }
             },
-            dismissButton = { TextButton(onClick = { showPasswordDialog = false }) { Text("取消") } },
+            dismissButton = { TextButton(onClick = { showPasswordDialog = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 }
@@ -753,14 +754,14 @@ private fun ChatContent(
                 FilterChip(
                     selected = chatScope == scope,
                     onClick = { onScopeChange(scope) },
-                    label = { Text(scope.title) },
+                     label = { Text(stringResource(scope.titleResource)) },
                 )
             }
         }
         if (chatScope == ChatScope.System) {
             LazyColumn(Modifier.weight(1f), contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(events, key = { it.id }) { event -> EventCard(event) }
-                if (events.isEmpty()) item { EmptyStateCard("暂无事件", "成员加入、离开和连接状态会显示在这里。") }
+                 if (events.isEmpty()) item { EmptyStateCard(R.string.chat_no_events, R.string.chat_events_empty_message) }
             }
         } else {
             val visible = messages.filter { message ->
@@ -777,9 +778,9 @@ private fun ChatContent(
             LazyColumn(Modifier.weight(1f), contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(visible, key = { it.id }) { message -> MessageCard(message) }
                 if (chatScope == ChatScope.Private && privateChatClientId <= 0) {
-                    item { EmptyStateCard("选择一位成员开始私聊", "打开频道成员操作菜单，然后选择“发送私聊”。") }
+                     item { EmptyStateCard(R.string.chat_private_select_member, R.string.chat_private_open_member_actions) }
                 } else if (visible.isEmpty()) {
-                    item { EmptyStateCard("这是聊天的开始", "发送一条消息，和频道里的朋友打个招呼吧。") }
+                     item { EmptyStateCard(R.string.chat_empty_title, R.string.chat_empty_message) }
                 }
             }
             Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -787,7 +788,7 @@ private fun ChatContent(
                     value = draft,
                     onValueChange = onDraftChange,
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("发送消息…") },
+                    placeholder = { Text(stringResource(R.string.chat_message_hint)) },
                     shape = RoundedCornerShape(22.dp),
                     maxLines = 4,
                     enabled = chatScope != ChatScope.Private || privateChatClientId > 0,
@@ -795,19 +796,19 @@ private fun ChatContent(
                 )
                 Spacer(Modifier.width(8.dp))
                 IconButton(onClick = onSend, enabled = draft.isNotBlank()) {
-                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "发送消息", tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(R.string.chat_send_message), tint = MaterialTheme.colorScheme.primary)
                 }
             }
         }
     }
 }
 
-private val ChatScope.title: String
+private val ChatScope.titleResource: Int
     get() = when (this) {
-        ChatScope.Channel -> "频道"
-        ChatScope.Server -> "服务器"
-        ChatScope.Private -> "私聊"
-        ChatScope.System -> "事件"
+        ChatScope.Channel -> R.string.tab_channels
+        ChatScope.Server -> R.string.chat_scope_server
+        ChatScope.Private -> R.string.chat_scope_private
+        ChatScope.System -> R.string.chat_scope_events
     }
 
 @Composable
@@ -822,8 +823,8 @@ private fun MessageCard(message: ChatMessage) {
         ) {
             Column(Modifier.padding(horizontal = 15.dp, vertical = 11.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (message.isSelf) "你" else message.senderName, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                    Text(formatTime(message.timestamp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(if (message.isSelf) stringResource(R.string.label_you) else message.senderName, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    Text(formatTime(message.timestamp, LocalContext.current.resources.configuration.locales[0]), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Text(message.message, style = MaterialTheme.typography.bodyLarge)
             }
@@ -835,7 +836,7 @@ private fun MessageCard(message: ChatMessage) {
 private fun EventCard(event: ServerEvent) {
     Card(shape = RoundedCornerShape(17.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
         Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(formatTime(event.timestamp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(formatTime(event.timestamp, LocalContext.current.resources.configuration.locales[0]), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.width(12.dp))
             Text(event.message, style = MaterialTheme.typography.bodyMedium)
         }
@@ -858,13 +859,14 @@ private fun SettingsContent(
         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 18.dp, vertical = 18.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { Text("语音设置", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold) }
+        item { Text(stringResource(R.string.settings_voice_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold) }
+        item { AppLanguageSelector() }
         item {
             SettingActionCard(
                 icon = if (state.microphoneMuted) Icons.Filled.MicOff else Icons.Filled.Mic,
-                title = if (state.microphoneMuted) "取消麦克风静音" else "麦克风静音",
-                subtitle = "语音会话由 Android 前台服务维持",
-                action = if (state.microphoneMuted) "开启" else "静音",
+                title = stringResource(if (state.microphoneMuted) R.string.settings_unmute_microphone else R.string.settings_mute_microphone),
+                subtitle = stringResource(R.string.settings_foreground_service),
+                action = stringResource(if (state.microphoneMuted) R.string.settings_enable else R.string.action_mute),
                 onClick = onToggleMicrophone,
             )
         }
@@ -875,7 +877,7 @@ private fun SettingsContent(
                         Icon(Icons.Filled.Speaker, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("语音播放音量", fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.settings_output_volume), fontWeight = FontWeight.SemiBold)
                             Text("${(state.outputVolume * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
@@ -886,44 +888,48 @@ private fun SettingsContent(
         item {
             SettingActionCard(
                 icon = Icons.Filled.WifiTethering,
-                title = "离开状态",
-                subtitle = if (state.away) "当前显示为离开" else "当前显示为在线",
-                action = if (state.away) "返回" else "设为离开",
+                title = stringResource(R.string.settings_away_title),
+                subtitle = stringResource(if (state.away) R.string.settings_currently_away else R.string.settings_currently_online),
+                action = stringResource(if (state.away) R.string.settings_return else R.string.settings_set_away),
                 onClick = { onSetAway(!state.away) },
             )
         }
         item {
             Card(shape = RoundedCornerShape(22.dp)) {
                 Column(Modifier.fillMaxWidth().padding(17.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Text("连接信息", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    Text("网关：${state.gatewayUrl}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("TeamSpeak：${state.teamSpeakTarget.ifBlank { "由网关指定" }}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.settings_connection_info), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.settings_gateway_format, state.gatewayUrl), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.settings_teamspeak_format, state.teamSpeakTarget.ifBlank { stringResource(R.string.settings_gateway_target) }), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
-                        "语音传输：" + when (state.audioTransport) {
-                            VoiceAudioTransport.WebRtc -> if (state.audioReady) "WebRTC 已连接" else "正在建立 WebRTC"
-                            VoiceAudioTransport.Compatibility -> "PCM/Opus 兼容传输已启动"
-                            VoiceAudioTransport.None -> if (state.webrtcAvailable) "WebRTC 尚未连接" else "兼容音频不可用"
-                        },
+                        stringResource(R.string.settings_voice_transport_format, stringResource(when (state.audioTransport) {
+                            VoiceAudioTransport.WebRtc -> if (state.audioReady) R.string.settings_webrtc_connected else R.string.settings_webrtc_connecting
+                            VoiceAudioTransport.Compatibility -> R.string.settings_compatibility_connected
+                            VoiceAudioTransport.None -> if (state.webrtcAvailable) R.string.settings_webrtc_disconnected else R.string.settings_compatibility_unavailable
+                        })),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    if (state.audioError.isNotBlank()) Text(state.audioError, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    if (state.audioError.isNotBlank()) Text(stringResource(R.string.error_audio_generic), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     Text(
-                        "网络往返：${state.latencyRttMs?.let { "$it ms" } ?: "尚未测量"} · TeamSpeak：${state.teamSpeakLatencyMs?.let { "$it ms" } ?: "—"}",
+                        stringResource(
+                            R.string.settings_latency_format,
+                            state.latencyRttMs?.let { "$it ms" } ?: stringResource(R.string.settings_not_measured),
+                            state.teamSpeakLatencyMs?.let { "$it ms" } ?: "—",
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    if (state.teamSpeakReachable == false) Text("TeamSpeak 探测暂不可达", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                    TextButton(onClick = onLatencyProbe) { Text("测试连接延迟") }
+                    if (state.teamSpeakReachable == false) Text(stringResource(R.string.settings_teamspeak_unreachable), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = onLatencyProbe) { Text(stringResource(R.string.settings_test_latency)) }
                 }
             }
         }
         item {
             SettingActionCard(
                 icon = Icons.Filled.ChatBubbleOutline,
-                title = "清除本机聊天记录",
-                subtitle = "仅清除此网关与服务器在本机保存的 2,000 条以内消息",
-                action = "清除",
+                title = stringResource(R.string.settings_clear_history_title),
+                subtitle = stringResource(R.string.settings_clear_history_description),
+                action = stringResource(R.string.settings_clear),
                 onClick = { confirmClearHistory = true },
             )
         }
@@ -931,19 +937,19 @@ private fun SettingsContent(
             Button(onClick = onDisconnect, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
                 Icon(Icons.Filled.CallEnd, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("离开语音频道")
+                Text(stringResource(R.string.settings_disconnect))
             }
         }
     }
     if (confirmClearHistory) {
         AlertDialog(
             onDismissRequest = { confirmClearHistory = false },
-            title = { Text("清除本机聊天记录？") },
-            text = { Text("此操作不会影响 TeamSpeak 服务器或其他设备上的记录。WebSpeak 网关也不会提供连接前的旧聊天回放。") },
+            title = { Text(stringResource(R.string.settings_confirm_clear_title)) },
+            text = { Text(stringResource(R.string.settings_confirm_clear_message)) },
             confirmButton = {
-                TextButton(onClick = { onClearChatHistory(); confirmClearHistory = false }) { Text("清除记录") }
+                TextButton(onClick = { onClearChatHistory(); confirmClearHistory = false }) { Text(stringResource(R.string.settings_confirm_clear)) }
             },
-            dismissButton = { TextButton(onClick = { confirmClearHistory = false }) { Text("取消") } },
+            dismissButton = { TextButton(onClick = { confirmClearHistory = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 }
@@ -970,14 +976,14 @@ private fun SettingActionCard(
 }
 
 @Composable
-private fun EmptyStateCard(title: String, message: String) {
+private fun EmptyStateCard(@androidx.annotation.StringRes title: Int, @androidx.annotation.StringRes message: Int) {
     Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
         Column(Modifier.fillMaxWidth().padding(22.dp), verticalArrangement = Arrangement.spacedBy(5.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(message), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
-private fun formatTime(timestamp: Long): String =
-    DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(timestamp))
+private fun formatTime(timestamp: Long, locale: java.util.Locale): String =
+    DateFormat.getTimeInstance(DateFormat.SHORT, locale).format(Date(timestamp))

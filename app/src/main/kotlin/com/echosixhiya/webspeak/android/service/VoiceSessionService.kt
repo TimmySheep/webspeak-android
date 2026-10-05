@@ -17,6 +17,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.echosixhiya.webspeak.android.MainActivity
 import com.echosixhiya.webspeak.android.R
+import com.echosixhiya.webspeak.android.locale.AppLocaleContext
 import com.echosixhiya.webspeak.android.data.ConnectionProfileStore
 import com.echosixhiya.webspeak.android.data.ChatHistoryStore
 import com.echosixhiya.webspeak.android.data.GatewayApi
@@ -92,6 +93,10 @@ class VoiceSessionService : Service() {
     private var fallbackAudioGeneration = -1L
     @Volatile private var lastRemoteAudibleVoiceActivityAtMs = 0L
 
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocaleContext.wrap(newBase))
+    }
+
     override fun onCreate() {
         super.onCreate()
         microphoneMuted = getSharedPreferences(PREFERENCES, MODE_PRIVATE).getBoolean(KEY_MIC_MUTED, false)
@@ -101,6 +106,10 @@ class VoiceSessionService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
+            ACTION_REFRESH_LOCALIZED_NOTIFICATION -> {
+                createNotificationChannel()
+                updateNotification(currentNotificationText())
+            }
             ACTION_CONNECT -> {
                 val request = intent.toJoinRequest()
                 if (request == null) {
@@ -108,7 +117,7 @@ class VoiceSessionService : Service() {
                     return START_NOT_STICKY
                 }
                 try {
-                    startVoiceForeground(buildNotification(getString(R.string.notification_voice_connecting)))
+                    startVoiceForeground(buildNotification(localizedString(R.string.notification_voice_connecting)))
                 } catch (error: SecurityException) {
                     failWithoutForeground("MICROPHONE_PERMISSION_REQUIRED", "需要授予麦克风权限后才能加入语音")
                     stopSelf(startId)
@@ -304,7 +313,10 @@ class VoiceSessionService : Service() {
             "connected" -> {
                 handshakeTimeoutJob?.cancel()
                 val selfId = message.optInt("tsClientId", 0)
-                val members = GatewayMessageParser.members(message.optJSONArray("members"), selfId)
+                val members = GatewayMessageParser.members(
+                    message.optJSONArray("members"), selfId,
+                    unknownUser = localizedString(R.string.unknown_user),
+                )
                 val events = parseEvents(message.optJSONArray("serverEventLog"))
                 val webrtcAvailable = message.optBoolean("webrtcAvailable", false)
                 screenShareIceServers = parseScreenShareIceServers(message.optJSONArray("screenShareIceServers"))
@@ -330,10 +342,10 @@ class VoiceSessionService : Service() {
                         reconnectAttempt = 0,
                     )
                 }
-                updateNotification(getString(R.string.notification_voice_connected))
+                updateNotification(localizedString(R.string.notification_voice_connected))
                 sendCommand("setMicrophoneMuted", JSONObject().put("muted", microphoneMuted))
                 if (webrtcAvailable) startNativeVoiceRtc(currentGeneration)
-                else startCompatibilityVoice(currentGeneration, "网关未启用 WebRTC")
+                else startCompatibilityVoice(currentGeneration, localizedString(R.string.audio_gateway_no_webrtc))
                 sendJson(JSONObject().put("type", "screenShareList"))
                 val identity = message.optString("identity", "")
                 if (request.rememberIdentity && identity.length in 1..8192) runCatching { identityVault.write(identity) }
@@ -350,7 +362,11 @@ class VoiceSessionService : Service() {
 
             "channelList" -> {
                 val selfId = VoiceSessionStore.state.value.selfClientId
-                val channels = GatewayMessageParser.channels(message.optJSONArray("channels"), selfId)
+                val channels = GatewayMessageParser.channels(
+                    message.optJSONArray("channels"), selfId,
+                    unknownUser = localizedString(R.string.unknown_user),
+                    unnamedChannel = localizedString(R.string.unnamed_channel),
+                )
                 val channelMembers = channels.flatMap { it.members }.distinctBy { it.id }
                 VoiceSessionStore.update { previous ->
                     val mergedMembers = mergeMembers(previous.members, channelMembers)
@@ -362,11 +378,15 @@ class VoiceSessionService : Service() {
                         away = mergedMembers.firstOrNull { it.id == selfId }?.away ?: previous.away,
                     )
                 }
-                updateNotification(getString(R.string.notification_voice_connected))
+                updateNotification(localizedString(R.string.notification_voice_connected))
             }
 
             "memberEnter" -> {
-                val member = GatewayMessageParser.member(message, VoiceSessionStore.state.value.selfClientId)
+                val member = GatewayMessageParser.member(
+                    message,
+                    VoiceSessionStore.state.value.selfClientId,
+                    localizedString(R.string.unknown_user),
+                )
                 if (member.id > 0) VoiceSessionStore.update { previous ->
                     previous.copy(members = mergeMembers(previous.members, listOf(member)))
                 }
@@ -397,7 +417,11 @@ class VoiceSessionService : Service() {
             }
 
             "chatMessage" -> {
-                val chatMessage = GatewayMessageParser.message(message, VoiceSessionStore.state.value.selfClientId) ?: return
+                val chatMessage = GatewayMessageParser.message(
+                    message,
+                    VoiceSessionStore.state.value.selfClientId,
+                    localizedString(R.string.unknown_user),
+                ) ?: return
                 VoiceSessionStore.update { previous ->
                     previous.copy(messages = (previous.messages + chatMessage).takeLast(MAX_MESSAGES))
                 }
@@ -413,7 +437,7 @@ class VoiceSessionService : Service() {
                 val poke = PokeAlert(
                     id = "poke-${message.optLong("timestamp", System.currentTimeMillis())}-${message.optInt("invokerId")}",
                     invokerId = message.optInt("invokerId", 0),
-                    invokerName = message.optString("invokerName", "未知用户").take(120),
+                    invokerName = message.optString("invokerName", localizedString(R.string.unknown_user)).take(120),
                     message = message.optString("message", "").take(200),
                     timestamp = message.optLong("timestamp", System.currentTimeMillis()),
                 )
@@ -489,7 +513,7 @@ class VoiceSessionService : Service() {
                         audioTransport = VoiceAudioTransport.None,
                     )
                 }
-                updateNotification("语音网络正在恢复")
+                updateNotification(localizedString(R.string.notification_voice_reconnecting))
             }
 
             "reconnected" -> {
@@ -540,12 +564,12 @@ class VoiceSessionService : Service() {
             }
 
             "screenShareList" -> VoiceSessionStore.update {
-                it.copy(screenShares = GatewayMessageParser.screenShares(message.optJSONArray("streams")))
+                it.copy(screenShares = parseScreenShares(message.optJSONArray("streams")))
             }
 
             "screenShareStarted" -> {
                 val stream = message.optJSONObject("stream")?.let {
-                    GatewayMessageParser.screenShares(JSONArray().put(it)).firstOrNull()
+                    parseScreenShares(JSONArray().put(it)).firstOrNull()
                 } ?: return
                 val isOwner = message.optBoolean("owner", false)
                 if (isOwner) {
@@ -569,7 +593,7 @@ class VoiceSessionService : Service() {
 
             "screenShareJoined" -> {
                 val stream = message.optJSONObject("stream")?.let {
-                    GatewayMessageParser.screenShares(JSONArray().put(it)).firstOrNull()
+                    parseScreenShares(JSONArray().put(it)).firstOrNull()
                 } ?: return
                 VoiceSessionStore.update { previous ->
                     previous.copy(
@@ -620,7 +644,7 @@ class VoiceSessionService : Service() {
             "screenShareViewerCount" -> {
                 val streamId = message.optString("streamId", "")
                 val viewerCount = message.optInt("viewerCount", 0).coerceIn(0, 1000)
-                val viewers = GatewayMessageParser.screenShares(JSONArray().put(
+                val viewers = parseScreenShares(JSONArray().put(
                     JSONObject()
                         .put("streamId", streamId)
                         .put("source", "browser")
@@ -868,7 +892,7 @@ class VoiceSessionService : Service() {
                 errorMessage = message.take(400),
             )
         }
-        updateNotification("语音连接已结束")
+        updateNotification(localizedString(R.string.notification_voice_ended))
         socket?.close(NORMAL_CLOSE, "session-failed")
         socket = null
         activeRequest = null
@@ -934,7 +958,7 @@ class VoiceSessionService : Service() {
         if (VoiceSessionStore.state.value.phase == ConnectionPhase.Disconnected) return false
         return runCatching {
             startVoiceForeground(
-                buildNotification(if (mediaProjection) "正在共享屏幕 · 语音连接已保持" else getString(R.string.notification_voice_connected)),
+                buildNotification(if (mediaProjection) localizedString(R.string.notification_screen_share_active) else localizedString(R.string.notification_voice_connected)),
                 mediaProjection,
             )
             true
@@ -1064,14 +1088,20 @@ class VoiceSessionService : Service() {
         VoiceSessionStore.update { it.copy(screenShareStarting = false, screenShareError = message.take(400)) }
     }
 
+    private fun parseScreenShares(array: JSONArray?) = GatewayMessageParser.screenShares(
+        array,
+        unknownUser = localizedString(R.string.unknown_user),
+        screenShareName = localizedString(R.string.default_screen_share_name),
+    )
+
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val channel = NotificationChannel(
             NOTIFICATION_CHANNEL_ID,
-            getString(R.string.notification_channel_voice),
+            localizedString(R.string.notification_channel_voice),
             NotificationManager.IMPORTANCE_LOW,
         ).apply {
-            description = "在语音频道通话期间保持麦克风服务并显示会话状态"
+            description = localizedString(R.string.notification_channel_voice_description)
             setShowBadge(false)
         }
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
@@ -1101,7 +1131,7 @@ class VoiceSessionService : Service() {
         )
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_voice_notification)
-            .setContentTitle(getString(R.string.app_name))
+            .setContentTitle(localizedString(R.string.app_name))
             .setContentText(notificationContent(content))
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -1110,10 +1140,10 @@ class VoiceSessionService : Service() {
             .setContentIntent(openApp)
             .addAction(
                 if (microphoneMuted) R.drawable.ic_voice_notification else R.drawable.ic_voice_notification,
-                getString(if (microphoneMuted) R.string.notification_unmute else R.string.notification_mute),
+                localizedString(if (microphoneMuted) R.string.notification_unmute else R.string.notification_mute),
                 togglePending,
             )
-            .addAction(R.drawable.ic_voice_notification, getString(R.string.notification_disconnect), disconnectIntent)
+            .addAction(R.drawable.ic_voice_notification, localizedString(R.string.notification_disconnect), disconnectIntent)
             .build()
     }
 
@@ -1122,13 +1152,27 @@ class VoiceSessionService : Service() {
         getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, buildNotification(content))
     }
 
+    private fun currentNotificationText(): String = when (VoiceSessionStore.state.value.phase) {
+        ConnectionPhase.Connecting -> localizedString(R.string.notification_voice_connecting)
+        ConnectionPhase.Reconnecting -> localizedString(R.string.notification_voice_reconnecting)
+        ConnectionPhase.Connected -> when {
+            VoiceSessionStore.state.value.activeScreenShareId.isNotBlank() -> localizedString(R.string.notification_screen_share_active)
+            microphoneMuted -> localizedString(R.string.notification_voice_muted)
+            else -> localizedString(R.string.notification_voice_connected)
+        }
+        ConnectionPhase.Failed, ConnectionPhase.Disconnected -> localizedString(R.string.notification_voice_ended)
+    }
+
+    private fun localizedString(resourceId: Int, vararg formatArgs: Any): String =
+        AppLocaleContext.wrap(this).getString(resourceId, *formatArgs)
+
     private fun notificationContent(fallback: String): String {
         val state = VoiceSessionStore.state.value
         if (state.phase != ConnectionPhase.Connected) return fallback
         val channelName = state.channels.firstOrNull { it.id == state.currentChannelId }?.name
             ?.takeIf { it.isNotBlank() }
             ?: return fallback
-        return getString(R.string.notification_connected_to_channel, channelName)
+        return localizedString(R.string.notification_connected_to_channel, channelName)
     }
 
     private fun setMutedInternal(muted: Boolean) {
@@ -1141,7 +1185,7 @@ class VoiceSessionService : Service() {
         if (stateChanged) playMicrophoneStateCue(muted)
         sendCommand("setMicrophoneMuted", JSONObject().put("muted", muted))
         if (VoiceSessionStore.state.value.phase != ConnectionPhase.Disconnected) updateNotification(
-            if (muted) "语音连接已保持 · 麦克风静音" else getString(R.string.notification_voice_connected),
+            if (muted) localizedString(R.string.notification_voice_muted) else localizedString(R.string.notification_voice_connected),
         )
     }
 
@@ -1336,6 +1380,7 @@ class VoiceSessionService : Service() {
     }
 
     companion object {
+        private const val ACTION_REFRESH_LOCALIZED_NOTIFICATION = "com.echosixhiya.webspeak.android.action.REFRESH_LOCALIZED_NOTIFICATION"
         private const val NOTIFICATION_CHANNEL_ID = "webspeak.voice.session"
         private const val NOTIFICATION_ID = 6201
         private const val REQUEST_OPEN_APP = 6202
@@ -1395,6 +1440,13 @@ class VoiceSessionService : Service() {
         private const val EXTRA_VOLUME = "volume"
         private const val EXTRA_PROJECTION_DATA = "projectionData"
         private const val EXTRA_STREAM_ID = "streamId"
+
+        fun refreshLocalizedNotification(context: Context) {
+            if (VoiceSessionStore.state.value.phase == ConnectionPhase.Disconnected) return
+            context.startService(
+                Intent(context, VoiceSessionService::class.java).setAction(ACTION_REFRESH_LOCALIZED_NOTIFICATION),
+            )
+        }
 
         private fun defaultScreenShareIceServers() = listOf(
             PeerConnection.IceServer.builder("stun:turn.teamspeak.com:3478").createIceServer(),
