@@ -18,7 +18,7 @@ WebSpeak 的原生 Android 客户端。使用 Kotlin、Jetpack Compose 和 Mater
 ./gradlew testDebugUnitTest
 ```
 
-Android 麦克风权限由用户在前台明确授予。持续语音使用前台服务和常驻通知；Android 与设备厂商仍保留终止进程/网络的权利。
+Android 麦克风权限由用户在前台明确授予。持续语音使用前台服务和常驻通知
 
 ## 应用图标
 
