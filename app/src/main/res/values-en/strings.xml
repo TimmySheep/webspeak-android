@@ -20,6 +20,8 @@
     <string name="notification_disconnect">Disconnect</string>
     <string name="notification_mute">Mute</string>
     <string name="notification_unmute">Unmute</string>
+    <string name="notification_playback_off">Mute playback</string>
+    <string name="notification_playback_on">Resume playback</string>
 
     <string name="language_setting_title">App language</string>
     <string name="language_system_default">System default</string>
@@ -77,6 +79,11 @@
     <string name="member_away">Away</string>
     <string name="member_muted">Microphone muted</string>
     <string name="member_connected">Connected</string>
+    <string name="member_mic_on">Microphone on</string>
+    <string name="member_mic_muted">Microphone muted</string>
+    <string name="member_screen_sharing">Sharing screen</string>
+    <string name="member_speaker_on">Speaker on</string>
+    <string name="member_speaker_muted">Speaker muted</string>
     <string name="member_admin">Admin</string>
     <string name="member_options_format">Actions for %1$s</string>
     <string name="member_back_to_actions">Back to member actions</string>
@@ -115,8 +122,10 @@
     <string name="settings_unmute_microphone">Unmute microphone</string>
     <string name="settings_mute_microphone">Microphone mute</string>
     <string name="settings_foreground_service">Voice sessions run in an Android foreground service</string>
+    <string name="settings_microphone_requires_playback">Turn on voice playback before unmuting the microphone</string>
     <string name="settings_enable">Enable</string>
     <string name="settings_output_volume">Voice playback volume</string>
+    <string name="settings_output_muted">Voice playback is off</string>
     <string name="settings_away_title">Away status</string>
     <string name="settings_currently_away">Your status is Away</string>
     <string name="settings_currently_online">Your status is Online</string>
@@ -179,6 +188,7 @@
     <string name="notification_voice_ended">Voice session has ended</string>
     <string name="notification_screen_share_active">Sharing screen · voice session is active</string>
     <string name="notification_voice_muted">Voice session is active · microphone muted</string>
+    <string name="notification_voice_playback_muted">Voice session is active · playback off, microphone muted</string>
     <string name="unknown_user">Unknown user</string>
     <string name="unnamed_channel">Unnamed channel</string>
     <string name="default_screen_share_name">Screen share</string>

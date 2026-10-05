@@ -36,6 +36,7 @@ object GatewayMessageParser {
             channelId = item.stringValue("channelID", "channelId").take(32),
             avatar = item.optString("avatar", "").take(MAX_AVATAR_CHARS).ifBlank { null },
             away = item.optBoolean("away", false),
+            awayMessage = item.optString("awayMessage", "").take(200),
             inputMuted = item.optBoolean("inputMuted", false),
             outputMuted = item.optBoolean("outputMuted", false),
             channelCommander = item.optBoolean("channelCommander", false),

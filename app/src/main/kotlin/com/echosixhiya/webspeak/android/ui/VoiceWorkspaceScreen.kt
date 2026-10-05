@@ -137,7 +137,7 @@ fun VoiceWorkspaceScreen(
                 CenterAlignedTopAppBar(
                     title = {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(state.gatewayName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Text("TeamSpeak", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             Text(
                                 when (state.phase) {
                                     ConnectionPhase.Reconnecting -> stringResource(R.string.error_reconnecting_short)
@@ -146,17 +146,6 @@ fun VoiceWorkspaceScreen(
                                 style = MaterialTheme.typography.labelSmall,
                                 color = if (state.phase == ConnectionPhase.Reconnecting) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                        }
-                    },
-                    navigationIcon = {
-                        Box(Modifier.padding(start = 16.dp).size(11.dp).clip(CircleShape).background(
-                            if (state.phase == ConnectionPhase.Connected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.tertiary,
-                        ))
-                    },
-                    actions = {
-                        IconButton(onClick = onDisconnect) {
-                            Icon(Icons.Filled.CallEnd, contentDescription = stringResource(R.string.notification_disconnect), tint = MaterialTheme.colorScheme.error)
                         }
                     },
                 )
@@ -197,6 +186,7 @@ fun VoiceWorkspaceScreen(
                             state = state,
                             currentChannel = currentChannel,
                             onToggleMicrophone = onToggleMicrophone,
+                            onSetAway = onSetAway,
                             onSwitchToChannels = { selectedTab = ClientTab.Channels },
                             onWhisperActive = onWhisperActive,
                             onMemberPrivateChat = { clientId ->
@@ -311,6 +301,7 @@ private fun VoiceHomeContent(
     state: VoiceSessionState,
     currentChannel: VoiceChannel?,
     onToggleMicrophone: () -> Unit,
+    onSetAway: (Boolean) -> Unit,
     onSwitchToChannels: () -> Unit,
     onWhisperActive: (Boolean) -> Unit,
     onMemberPrivateChat: (Int) -> Unit,
@@ -349,19 +340,22 @@ private fun VoiceHomeContent(
                              Text(stringResource(R.string.workspace_voice_room), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f))
                             Spacer(Modifier.height(4.dp))
                              Text(currentChannel?.name ?: stringResource(R.string.workspace_waiting_channel), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                             Text("${pluralStringResource(R.plurals.member_count, currentMembers.size, currentMembers.size)} · ${state.nickname}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
+                             Text(pluralStringResource(R.plurals.member_count, currentMembers.size, currentMembers.size), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
                         }
                         Box(Modifier.size(52.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)), contentAlignment = Alignment.Center) {
                             Icon(Icons.Filled.Headphones, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(27.dp))
                         }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        FilledTonalButton(onClick = onToggleMicrophone, shape = RoundedCornerShape(16.dp)) {
+                        FilledTonalButton(onClick = onToggleMicrophone, enabled = state.speakerEnabled, shape = RoundedCornerShape(16.dp)) {
                             Icon(if (state.microphoneMuted) Icons.Filled.MicOff else Icons.Filled.Mic, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
                              Text(stringResource(if (state.microphoneMuted) R.string.action_unmute else R.string.action_mute))
                         }
-                         TextButton(onClick = onSwitchToChannels) { Text(stringResource(R.string.action_switch_channel)) }
+                        TextButton(onClick = onSwitchToChannels) { Text(stringResource(R.string.action_switch_channel)) }
+                        TextButton(onClick = { onSetAway(!state.away) }) {
+                            Text(stringResource(if (state.away) R.string.settings_return else R.string.settings_set_away))
+                        }
                     }
                     if (state.whisperTargetIds.isNotEmpty()) {
                         FilledTonalButton(
@@ -398,6 +392,9 @@ private fun VoiceHomeContent(
             items(currentMembers, key = { it.id }) { member ->
                 MemberCard(
                     member = member,
+                    isSharingScreen = state.screenShares.any { share ->
+                        share.ownerClientId == member.id || share.ownerNickname == member.nickname
+                    },
                     whisperSelected = member.id in state.whisperTargetIds,
                     channels = channels,
                     onPrivateChat = { onMemberPrivateChat(member.id) },
@@ -526,6 +523,7 @@ private fun ScreenShareVideoDialog(
 @Composable
 private fun MemberCard(
     member: VoiceMember,
+    isSharingScreen: Boolean,
     whisperSelected: Boolean,
     channels: List<VoiceChannel>,
     onPrivateChat: () -> Unit,
@@ -553,18 +551,33 @@ private fun MemberCard(
             Spacer(Modifier.width(13.dp))
             Column(Modifier.weight(1f)) {
                 Text(if (member.isSelf) stringResource(R.string.member_you_format, member.nickname) else member.nickname, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                val awayReason = member.awayMessage.trim()
                 Text(
                     when {
+                        member.away -> stringResource(R.string.member_away) + if (awayReason.isNotEmpty()) " · $awayReason" else ""
                         member.speaking -> stringResource(R.string.member_speaking)
-                        member.away -> stringResource(R.string.member_away)
-                        member.inputMuted -> stringResource(R.string.member_muted)
                         else -> stringResource(R.string.member_connected)
                     },
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (member.speaking && !member.away) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
                 )
+                if (isSharingScreen) {
+                    Text(stringResource(R.string.member_screen_sharing), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                }
             }
-            if (member.inputMuted) Icon(Icons.Filled.MicOff, contentDescription = stringResource(R.string.member_muted), tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+            Icon(
+                if (member.inputMuted) Icons.Filled.MicOff else Icons.Filled.Mic,
+                contentDescription = stringResource(if (member.inputMuted) R.string.member_mic_muted else R.string.member_mic_on),
+                tint = if (member.inputMuted) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp),
+            )
+            Icon(
+                Icons.Filled.Speaker,
+                contentDescription = stringResource(if (member.outputMuted) R.string.member_speaker_muted else R.string.member_speaker_on),
+                tint = if (member.outputMuted) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp),
+            )
             if (member.channelCommander) Text(stringResource(R.string.member_admin), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
             if (!member.isSelf) {
                 Box {
@@ -865,9 +878,12 @@ private fun SettingsContent(
             SettingActionCard(
                 icon = if (state.microphoneMuted) Icons.Filled.MicOff else Icons.Filled.Mic,
                 title = stringResource(if (state.microphoneMuted) R.string.settings_unmute_microphone else R.string.settings_mute_microphone),
-                subtitle = stringResource(R.string.settings_foreground_service),
+                subtitle = stringResource(
+                    if (state.speakerEnabled) R.string.settings_foreground_service else R.string.settings_microphone_requires_playback,
+                ),
                 action = stringResource(if (state.microphoneMuted) R.string.settings_enable else R.string.action_mute),
                 onClick = onToggleMicrophone,
+                enabled = state.speakerEnabled,
             )
         }
         item {
@@ -878,7 +894,11 @@ private fun SettingsContent(
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(stringResource(R.string.settings_output_volume), fontWeight = FontWeight.SemiBold)
-                            Text("${(state.outputVolume * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                if (state.speakerEnabled) "${(state.outputVolume * 100).toInt()}%" else stringResource(R.string.settings_output_muted),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                     }
                     Slider(value = state.outputVolume, onValueChange = onOutputVolume, valueRange = 0f..1f)
@@ -961,8 +981,9 @@ private fun SettingActionCard(
     subtitle: String,
     action: String,
     onClick: () -> Unit,
+    enabled: Boolean = true,
 ) {
-    Card(onClick = onClick, shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
+    Card(onClick = onClick, enabled = enabled, shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(23.dp))
             Spacer(Modifier.width(14.dp))
@@ -970,7 +991,11 @@ private fun SettingActionCard(
                 Text(title, fontWeight = FontWeight.SemiBold)
                 Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text(action, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+            Text(
+                action,
+                color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.labelLarge,
+            )
         }
     }
 }

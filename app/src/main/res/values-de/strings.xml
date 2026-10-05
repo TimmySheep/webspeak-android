@@ -20,6 +20,8 @@
     <string name="notification_disconnect">Trennen</string>
     <string name="notification_mute">Stummschalten</string>
     <string name="notification_unmute">Stummschaltung aufheben</string>
+    <string name="notification_playback_off">Wiedergabe stummschalten</string>
+    <string name="notification_playback_on">Wiedergabe fortsetzen</string>
     <string name="language_setting_title">App-Sprache</string>
     <string name="language_system_default">Systemstandard</string>
     <string name="connection_title">Sprachkanal beitreten</string>
@@ -76,6 +78,11 @@
     <string name="member_away">Abwesend</string>
     <string name="member_muted">Mikrofon stummgeschaltet</string>
     <string name="member_connected">Verbunden</string>
+    <string name="member_mic_on">Mikrofon an</string>
+    <string name="member_mic_muted">Mikrofon stumm</string>
+    <string name="member_screen_sharing">Bildschirm wird geteilt</string>
+    <string name="member_speaker_on">Lautsprecher an</string>
+    <string name="member_speaker_muted">Lautsprecher stumm</string>
     <string name="member_admin">Admin</string>
     <string name="member_options_format">Aktionen für %1$s</string>
     <string name="member_back_to_actions">Zurück zu den Mitgliederaktionen</string>
@@ -114,8 +121,10 @@
     <string name="settings_unmute_microphone">Mikrofon aktivieren</string>
     <string name="settings_mute_microphone">Mikrofon stummschalten</string>
     <string name="settings_foreground_service">Sprachsitzungen laufen über einen Android-Vordergrunddienst</string>
+    <string name="settings_microphone_requires_playback">Aktiviere die Sprachwiedergabe, bevor du das Mikrofon einschaltest</string>
     <string name="settings_enable">Aktivieren</string>
     <string name="settings_output_volume">Sprachwiedergabe-Lautstärke</string>
+    <string name="settings_output_muted">Sprachwiedergabe ist ausgeschaltet</string>
     <string name="settings_away_title">Abwesenheitsstatus</string>
     <string name="settings_currently_away">Dein Status ist Abwesend</string>
     <string name="settings_currently_online">Dein Status ist Online</string>
@@ -177,6 +186,7 @@
     <string name="notification_voice_ended">Sprachsitzung beendet</string>
     <string name="notification_screen_share_active">Bildschirm wird geteilt · Sprachsitzung aktiv</string>
     <string name="notification_voice_muted">Sprachsitzung aktiv · Mikrofon stumm</string>
+    <string name="notification_voice_playback_muted">Sprachsitzung aktiv · Wiedergabe aus, Mikrofon stumm</string>
     <string name="unknown_user">Unbekannter Benutzer</string>
     <string name="unnamed_channel">Unbenannter Kanal</string>
     <string name="default_screen_share_name">Bildschirmfreigabe</string>

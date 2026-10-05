@@ -20,6 +20,8 @@
     <string name="notification_disconnect">Desconectar</string>
     <string name="notification_mute">Silenciar</string>
     <string name="notification_unmute">Activar micrófono</string>
+    <string name="notification_playback_off">Silenciar reproducción</string>
+    <string name="notification_playback_on">Reanudar reproducción</string>
     <string name="language_setting_title">Idioma de la aplicación</string>
     <string name="language_system_default">Idioma del sistema</string>
     <string name="connection_title">Unirse a un canal de voz</string>
@@ -76,6 +78,11 @@
     <string name="member_away">Ausente</string>
     <string name="member_muted">Micrófono silenciado</string>
     <string name="member_connected">Conectado</string>
+    <string name="member_mic_on">Micrófono activado</string>
+    <string name="member_mic_muted">Micrófono silenciado</string>
+    <string name="member_screen_sharing">Compartiendo pantalla</string>
+    <string name="member_speaker_on">Altavoz activado</string>
+    <string name="member_speaker_muted">Altavoz silenciado</string>
     <string name="member_admin">Admin</string>
     <string name="member_options_format">Acciones de %1$s</string>
     <string name="member_back_to_actions">Volver a las acciones del miembro</string>
@@ -114,8 +121,10 @@
     <string name="settings_unmute_microphone">Activar micrófono</string>
     <string name="settings_mute_microphone">Silenciar micrófono</string>
     <string name="settings_foreground_service">Las sesiones de voz se mantienen con un servicio en primer plano de Android</string>
+    <string name="settings_microphone_requires_playback">Activa la reproducción de voz antes de activar el micrófono</string>
     <string name="settings_enable">Activar</string>
     <string name="settings_output_volume">Volumen de reproducción de voz</string>
+    <string name="settings_output_muted">La reproducción de voz está desactivada</string>
     <string name="settings_away_title">Estado de ausencia</string>
     <string name="settings_currently_away">Tu estado aparece como ausente</string>
     <string name="settings_currently_online">Tu estado aparece como conectado</string>
@@ -177,6 +186,7 @@
     <string name="notification_voice_ended">La sesión de voz ha finalizado</string>
     <string name="notification_screen_share_active">Compartiendo pantalla · sesión de voz activa</string>
     <string name="notification_voice_muted">Sesión de voz activa · micrófono silenciado</string>
+    <string name="notification_voice_playback_muted">Sesión de voz activa · reproducción apagada, micrófono silenciado</string>
     <string name="unknown_user">Usuario desconocido</string>
     <string name="unnamed_channel">Canal sin nombre</string>
     <string name="default_screen_share_name">Compartir pantalla</string>

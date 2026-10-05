@@ -20,6 +20,8 @@
     <string name="notification_disconnect">切断</string>
     <string name="notification_mute">ミュート</string>
     <string name="notification_unmute">ミュート解除</string>
+    <string name="notification_playback_off">音声再生をミュート</string>
+    <string name="notification_playback_on">音声再生を再開</string>
     <string name="language_setting_title">アプリの言語</string>
     <string name="language_system_default">システムの言語</string>
     <string name="connection_title">音声チャンネルに接続</string>
@@ -76,6 +78,11 @@
     <string name="member_away">離席中</string>
     <string name="member_muted">マイクをミュート中</string>
     <string name="member_connected">接続済み</string>
+    <string name="member_mic_on">マイクオン</string>
+    <string name="member_mic_muted">マイクミュート</string>
+    <string name="member_screen_sharing">画面を共有中</string>
+    <string name="member_speaker_on">スピーカーオン</string>
+    <string name="member_speaker_muted">スピーカーミュート</string>
     <string name="member_admin">管理者</string>
     <string name="member_options_format">%1$sの操作</string>
     <string name="member_back_to_actions">メンバー操作に戻る</string>
@@ -114,8 +121,10 @@
     <string name="settings_unmute_microphone">マイクのミュートを解除</string>
     <string name="settings_mute_microphone">マイクをミュート</string>
     <string name="settings_foreground_service">音声セッションはAndroidのフォアグラウンドサービスで維持されます</string>
+    <string name="settings_microphone_requires_playback">マイクを有効にするには音声再生をオンにしてください</string>
     <string name="settings_enable">有効にする</string>
     <string name="settings_output_volume">音声再生音量</string>
+    <string name="settings_output_muted">音声再生はオフです</string>
     <string name="settings_away_title">離席状態</string>
     <string name="settings_currently_away">現在は離席中として表示</string>
     <string name="settings_currently_online">現在はオンラインとして表示</string>
@@ -177,6 +186,7 @@
     <string name="notification_voice_ended">音声セッションが終了しました</string>
     <string name="notification_screen_share_active">画面共有中 · 音声セッションを維持中</string>
     <string name="notification_voice_muted">音声セッションを維持中 · マイクをミュート</string>
+    <string name="notification_voice_playback_muted">音声セッションを維持中 · 再生オフ、マイクをミュート</string>
     <string name="unknown_user">不明なユーザー</string>
     <string name="unnamed_channel">名前のないチャンネル</string>
     <string name="default_screen_share_name">画面共有</string>

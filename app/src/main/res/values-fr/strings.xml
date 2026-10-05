@@ -20,6 +20,8 @@
     <string name="notification_disconnect">Déconnecter</string>
     <string name="notification_mute">Couper le micro</string>
     <string name="notification_unmute">Réactiver le micro</string>
+    <string name="notification_playback_off">Couper la lecture</string>
+    <string name="notification_playback_on">Reprendre la lecture</string>
     <string name="language_setting_title">Langue de l’application</string>
     <string name="language_system_default">Langue du système</string>
     <string name="connection_title">Rejoindre un canal vocal</string>
@@ -76,6 +78,11 @@
     <string name="member_away">Absent</string>
     <string name="member_muted">Micro coupé</string>
     <string name="member_connected">Connecté</string>
+    <string name="member_mic_on">Micro activé</string>
+    <string name="member_mic_muted">Micro coupé</string>
+    <string name="member_screen_sharing">Partage l’écran</string>
+    <string name="member_speaker_on">Haut-parleur activé</string>
+    <string name="member_speaker_muted">Haut-parleur coupé</string>
     <string name="member_admin">Admin</string>
     <string name="member_options_format">Actions pour %1$s</string>
     <string name="member_back_to_actions">Retour aux actions du membre</string>
@@ -114,8 +121,10 @@
     <string name="settings_unmute_microphone">Réactiver le micro</string>
     <string name="settings_mute_microphone">Couper le micro</string>
     <string name="settings_foreground_service">Les sessions vocales utilisent un service de premier plan Android</string>
+    <string name="settings_microphone_requires_playback">Activez la lecture vocale avant de réactiver le micro</string>
     <string name="settings_enable">Activer</string>
     <string name="settings_output_volume">Volume de lecture vocale</string>
+    <string name="settings_output_muted">Lecture vocale désactivée</string>
     <string name="settings_away_title">Statut d’absence</string>
     <string name="settings_currently_away">Votre statut est Absent</string>
     <string name="settings_currently_online">Votre statut est En ligne</string>
@@ -177,6 +186,7 @@
     <string name="notification_voice_ended">La session vocale est terminée</string>
     <string name="notification_screen_share_active">Partage d’écran · session vocale active</string>
     <string name="notification_voice_muted">Session vocale active · micro coupé</string>
+    <string name="notification_voice_playback_muted">Session vocale active · lecture coupée, micro coupé</string>
     <string name="unknown_user">Utilisateur inconnu</string>
     <string name="unnamed_channel">Canal sans nom</string>
     <string name="default_screen_share_name">Partage d’écran</string>

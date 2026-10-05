@@ -83,6 +83,8 @@ class VoiceSessionService : Service() {
     private var microphoneMuted = false
     private var microphoneCueToneGenerator: ToneGenerator? = null
     private var outputVolume = 1f
+    private var lastAudibleOutputVolume = 1f
+    private var speakerEnabled = true
     private var historyGatewayKey = ""
     private var historyServerKey = ""
     private val requestSequence = AtomicLong()
@@ -99,8 +101,17 @@ class VoiceSessionService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        microphoneMuted = getSharedPreferences(PREFERENCES, MODE_PRIVATE).getBoolean(KEY_MIC_MUTED, false)
-        outputVolume = getSharedPreferences(PREFERENCES, MODE_PRIVATE).getFloat(KEY_OUTPUT_VOLUME, 1f).coerceIn(0f, 1f)
+        val preferences = getSharedPreferences(PREFERENCES, MODE_PRIVATE)
+        outputVolume = preferences.getFloat(KEY_OUTPUT_VOLUME, 1f).coerceIn(0f, 1f)
+        lastAudibleOutputVolume = preferences.getFloat(
+            KEY_LAST_AUDIBLE_OUTPUT_VOLUME,
+            outputVolume.takeIf { it > 0f } ?: DEFAULT_OUTPUT_VOLUME,
+        ).coerceIn(0f, 1f).takeIf { it > 0f } ?: DEFAULT_OUTPUT_VOLUME
+        speakerEnabled = preferences.getBoolean(KEY_SPEAKER_ENABLED, outputVolume > 0f) && outputVolume > 0f
+        microphoneMuted = VoiceAudioPrivacyPolicy.microphoneMutedAfterSpeakerChange(
+            preferences.getBoolean(KEY_MIC_MUTED, false),
+            speakerEnabled,
+        )
         createNotificationChannel()
     }
 
@@ -145,7 +156,9 @@ class VoiceSessionService : Service() {
                         reconnectAttempt = 0,
                         audioReady = false,
                         audioTransport = VoiceAudioTransport.None,
+                        microphoneMuted = microphoneMuted,
                         outputVolume = outputVolume,
+                        speakerEnabled = speakerEnabled,
                         screenShares = emptyList(),
                         activeScreenShareId = "",
                         watchingScreenShareId = "",
@@ -158,6 +171,7 @@ class VoiceSessionService : Service() {
 
             ACTION_DISCONNECT -> stopSession()
             ACTION_SET_MICROPHONE_MUTED -> setMutedInternal(intent.getBooleanExtra(EXTRA_MUTED, !microphoneMuted))
+            ACTION_TOGGLE_SPEAKER -> setSpeakerEnabledInternal(!speakerEnabled)
             ACTION_SWITCH_CHANNEL -> switchChannelInternal(
                 intent.getStringExtra(EXTRA_CHANNEL_ID).orEmpty(),
                 intent.getStringExtra(EXTRA_CHANNEL_PASSWORD).orEmpty(),
@@ -447,7 +461,7 @@ class VoiceSessionService : Service() {
             "voiceActivity" -> {
                 val speaking = parseIntSet(message.optJSONArray("clientIds"))
                 val current = VoiceSessionStore.state.value
-                if (outputVolume > 0f && speaking.any { id ->
+                if (effectiveOutputVolume() > 0f && speaking.any { id ->
                         id != current.selfClientId && current.members.firstOrNull { it.id == id }?.volume?.let { it > 0f } != false
                     }
                 ) {
@@ -743,7 +757,7 @@ class VoiceSessionService : Service() {
             },
         )
         rtc = nativeRtc
-        nativeRtc.setOutputVolume(outputVolume.toDouble())
+        nativeRtc.setOutputVolume(effectiveOutputVolume().toDouble())
         audioConnectionTimeoutJob = serviceScope.launch {
             kotlinx.coroutines.delay(VOICE_RTC_CONNECTION_TIMEOUT_MS)
             if (currentGeneration == generation && rtc === nativeRtc
@@ -778,7 +792,7 @@ class VoiceSessionService : Service() {
             memberVolume = { clientId ->
                 VoiceSessionStore.state.value.members.firstOrNull { it.id == clientId }?.volume?.toFloat() ?: 1f
             },
-            outputVolume = { outputVolume },
+            outputVolume = { effectiveOutputVolume() },
             onError = { detail ->
                 serviceScope.launch {
                     if (currentGeneration == generation && compatibilityAudio === transport) {
@@ -836,7 +850,7 @@ class VoiceSessionService : Service() {
                     outboundBytes = currentBytes
                 }
 
-                val recentRemoteSpeech = lastRemoteAudibleVoiceActivityAtMs > 0L && outputVolume > 0f
+                val recentRemoteSpeech = lastRemoteAudibleVoiceActivityAtMs > 0L && effectiveOutputVolume() > 0f
                     && now - lastRemoteAudibleVoiceActivityAtMs <= VOICE_ACTIVITY_GRACE_MS
                 if (recentRemoteSpeech && inboundBytes != null && now - inboundProgressAt >= AUDIO_RTP_STALL_TIMEOUT_MS) {
                     startCompatibilityVoice(currentGeneration, "遠端正在發言，但 WebRTC 沒有收到音訊資料")
@@ -1123,6 +1137,14 @@ class VoiceSessionService : Service() {
             toggleIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
+        val speakerIntent = Intent(this, VoiceSessionService::class.java)
+            .setAction(ACTION_TOGGLE_SPEAKER)
+        val speakerPending = PendingIntent.getService(
+            this,
+            REQUEST_TOGGLE_SPEAKER,
+            speakerIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
         val disconnectIntent = PendingIntent.getService(
             this,
             REQUEST_DISCONNECT,
@@ -1138,12 +1160,22 @@ class VoiceSessionService : Service() {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(openApp)
-            .addAction(
-                if (microphoneMuted) R.drawable.ic_voice_notification else R.drawable.ic_voice_notification,
-                localizedString(if (microphoneMuted) R.string.notification_unmute else R.string.notification_mute),
-                togglePending,
-            )
-            .addAction(R.drawable.ic_voice_notification, localizedString(R.string.notification_disconnect), disconnectIntent)
+            .apply {
+                // When playback is off, do not expose an unmute action in the notification.
+                if (speakerEnabled) {
+                    addAction(
+                        R.drawable.ic_voice_notification,
+                        localizedString(if (microphoneMuted) R.string.notification_unmute else R.string.notification_mute),
+                        togglePending,
+                    )
+                }
+                addAction(
+                    R.drawable.ic_voice_notification,
+                    localizedString(if (speakerEnabled) R.string.notification_playback_off else R.string.notification_playback_on),
+                    speakerPending,
+                )
+                addAction(R.drawable.ic_voice_notification, localizedString(R.string.notification_disconnect), disconnectIntent)
+            }
             .build()
     }
 
@@ -1156,6 +1188,7 @@ class VoiceSessionService : Service() {
         ConnectionPhase.Connecting -> localizedString(R.string.notification_voice_connecting)
         ConnectionPhase.Reconnecting -> localizedString(R.string.notification_voice_reconnecting)
         ConnectionPhase.Connected -> when {
+            !speakerEnabled -> localizedString(R.string.notification_voice_playback_muted)
             VoiceSessionStore.state.value.activeScreenShareId.isNotBlank() -> localizedString(R.string.notification_screen_share_active)
             microphoneMuted -> localizedString(R.string.notification_voice_muted)
             else -> localizedString(R.string.notification_voice_connected)
@@ -1168,7 +1201,7 @@ class VoiceSessionService : Service() {
 
     private fun notificationContent(fallback: String): String {
         val state = VoiceSessionStore.state.value
-        if (state.phase != ConnectionPhase.Connected) return fallback
+        if (state.phase != ConnectionPhase.Connected || !speakerEnabled || microphoneMuted) return fallback
         val channelName = state.channels.firstOrNull { it.id == state.currentChannelId }?.name
             ?.takeIf { it.isNotBlank() }
             ?: return fallback
@@ -1176,6 +1209,10 @@ class VoiceSessionService : Service() {
     }
 
     private fun setMutedInternal(muted: Boolean) {
+        if (!muted && !VoiceAudioPrivacyPolicy.mayUnmuteMicrophone(speakerEnabled)) {
+            if (!microphoneMuted) setMutedInternal(true)
+            return
+        }
         val stateChanged = microphoneMuted != muted
         microphoneMuted = muted
         getSharedPreferences(PREFERENCES, MODE_PRIVATE).edit().putBoolean(KEY_MIC_MUTED, muted).apply()
@@ -1184,9 +1221,7 @@ class VoiceSessionService : Service() {
         VoiceSessionStore.update { it.copy(microphoneMuted = muted) }
         if (stateChanged) playMicrophoneStateCue(muted)
         sendCommand("setMicrophoneMuted", JSONObject().put("muted", muted))
-        if (VoiceSessionStore.state.value.phase != ConnectionPhase.Disconnected) updateNotification(
-            if (muted) localizedString(R.string.notification_voice_muted) else localizedString(R.string.notification_voice_connected),
-        )
+        if (VoiceSessionStore.state.value.phase != ConnectionPhase.Disconnected) updateNotification(currentNotificationText())
     }
 
     private fun playMicrophoneStateCue(muted: Boolean) {
@@ -1248,11 +1283,40 @@ class VoiceSessionService : Service() {
     }
 
     private fun setOutputVolumeInternal(value: Float) {
+        val previousOutputVolume = outputVolume
         outputVolume = value.coerceIn(0f, 1f)
-        getSharedPreferences(PREFERENCES, MODE_PRIVATE).edit().putFloat(KEY_OUTPUT_VOLUME, outputVolume).apply()
-        rtc?.setOutputVolume(outputVolume.toDouble())
-        VoiceSessionStore.update { it.copy(outputVolume = outputVolume) }
+        if (outputVolume > 0f) lastAudibleOutputVolume = outputVolume
+        speakerEnabled = VoiceAudioPrivacyPolicy.speakerEnabledAfterOutputVolumeChange(
+            speakerEnabled,
+            previousOutputVolume,
+            outputVolume,
+        )
+        persistAudioOutputPreferences()
+        rtc?.setOutputVolume(effectiveOutputVolume().toDouble())
+        VoiceSessionStore.update { it.copy(outputVolume = outputVolume, speakerEnabled = speakerEnabled) }
+        if (!speakerEnabled) setMutedInternal(true)
+        else if (VoiceSessionStore.state.value.phase != ConnectionPhase.Disconnected) updateNotification(currentNotificationText())
     }
+
+    private fun setSpeakerEnabledInternal(enabled: Boolean) {
+        if (enabled && outputVolume <= 0f) outputVolume = lastAudibleOutputVolume
+        speakerEnabled = enabled && outputVolume > 0f
+        persistAudioOutputPreferences()
+        rtc?.setOutputVolume(effectiveOutputVolume().toDouble())
+        VoiceSessionStore.update { it.copy(outputVolume = outputVolume, speakerEnabled = speakerEnabled) }
+        if (!speakerEnabled) setMutedInternal(true)
+        else if (VoiceSessionStore.state.value.phase != ConnectionPhase.Disconnected) updateNotification(currentNotificationText())
+    }
+
+    private fun persistAudioOutputPreferences() {
+        getSharedPreferences(PREFERENCES, MODE_PRIVATE).edit()
+            .putFloat(KEY_OUTPUT_VOLUME, outputVolume)
+            .putFloat(KEY_LAST_AUDIBLE_OUTPUT_VOLUME, lastAudibleOutputVolume)
+            .putBoolean(KEY_SPEAKER_ENABLED, speakerEnabled)
+            .apply()
+    }
+
+    private fun effectiveOutputVolume(): Float = if (speakerEnabled) outputVolume else 0f
 
     private fun setMemberVolumeInternal(clientId: Int, value: Float) {
         if (clientId <= 0) return
@@ -1386,6 +1450,8 @@ class VoiceSessionService : Service() {
         private const val REQUEST_OPEN_APP = 6202
         private const val REQUEST_TOGGLE_MIC = 6203
         private const val REQUEST_DISCONNECT = 6204
+        private const val REQUEST_TOGGLE_SPEAKER = 6205
+        private const val DEFAULT_OUTPUT_VOLUME = 1f
         private const val NORMAL_CLOSE = 1000
         private const val HANDSHAKE_TIMEOUT_MS = 35_000L
         private const val VOICE_RTC_CONNECTION_TIMEOUT_MS = 15_000L
@@ -1401,10 +1467,13 @@ class VoiceSessionService : Service() {
         private const val PREFERENCES = "webspeak_voice_preferences"
         private const val KEY_MIC_MUTED = "microphone_muted"
         private const val KEY_OUTPUT_VOLUME = "output_volume"
+        private const val KEY_LAST_AUDIBLE_OUTPUT_VOLUME = "last_audible_output_volume"
+        private const val KEY_SPEAKER_ENABLED = "speaker_enabled"
 
         private const val ACTION_CONNECT = "com.echosixhiya.webspeak.android.action.CONNECT"
         private const val ACTION_DISCONNECT = "com.echosixhiya.webspeak.android.action.DISCONNECT"
         private const val ACTION_SET_MICROPHONE_MUTED = "com.echosixhiya.webspeak.android.action.SET_MICROPHONE_MUTED"
+        private const val ACTION_TOGGLE_SPEAKER = "com.echosixhiya.webspeak.android.action.TOGGLE_SPEAKER"
         private const val ACTION_SWITCH_CHANNEL = "com.echosixhiya.webspeak.android.action.SWITCH_CHANNEL"
         private const val ACTION_SEND_TEXT = "com.echosixhiya.webspeak.android.action.SEND_TEXT"
         private const val ACTION_SET_AWAY = "com.echosixhiya.webspeak.android.action.SET_AWAY"

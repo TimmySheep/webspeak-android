@@ -20,6 +20,8 @@
     <string name="notification_disconnect">断开</string>
     <string name="notification_mute">静音</string>
     <string name="notification_unmute">取消静音</string>
+    <string name="notification_playback_off">关闭语音播放</string>
+    <string name="notification_playback_on">开启语音播放</string>
 
     <string name="language_setting_title">应用语言</string>
     <string name="language_system_default">跟随系统</string>
@@ -85,6 +87,11 @@
     <string name="member_away">离开</string>
     <string name="member_muted">麦克风已静音</string>
     <string name="member_connected">已连接</string>
+    <string name="member_mic_on">麦克风开启</string>
+    <string name="member_mic_muted">麦克风静音</string>
+    <string name="member_screen_sharing">正在直播屏幕</string>
+    <string name="member_speaker_on">扬声器开启</string>
+    <string name="member_speaker_muted">扬声器静音</string>
     <string name="member_admin">管理</string>
     <string name="member_options_format">%1$s 的操作</string>
     <string name="member_back_to_actions">返回成员操作</string>
@@ -126,8 +133,10 @@
     <string name="settings_unmute_microphone">取消麦克风静音</string>
     <string name="settings_mute_microphone">麦克风静音</string>
     <string name="settings_foreground_service">语音会话由 Android 前台服务维持</string>
+    <string name="settings_microphone_requires_playback">开启语音播放后才能开麦</string>
     <string name="settings_enable">开启</string>
     <string name="settings_output_volume">语音播放音量</string>
+    <string name="settings_output_muted">语音播放已关闭</string>
     <string name="settings_away_title">离开状态</string>
     <string name="settings_currently_away">当前显示为离开</string>
     <string name="settings_currently_online">当前显示为在线</string>
@@ -190,6 +199,7 @@
     <string name="notification_voice_ended">语音连接已结束</string>
     <string name="notification_screen_share_active">正在共享屏幕 · 语音连接已保持</string>
     <string name="notification_voice_muted">语音连接已保持 · 麦克风静音</string>
+    <string name="notification_voice_playback_muted">语音连接已保持 · 播放关闭，麦克风静音</string>
     <string name="unknown_user">未知用户</string>
     <string name="unnamed_channel">未命名频道</string>
     <string name="default_screen_share_name">屏幕共享</string>
