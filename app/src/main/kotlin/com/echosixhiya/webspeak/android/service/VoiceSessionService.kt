@@ -13,6 +13,7 @@ import android.media.ToneGenerator
 import android.os.Build
 import android.os.IBinder
 import android.os.SystemClock
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.echosixhiya.webspeak.android.MainActivity
@@ -30,6 +31,7 @@ import com.echosixhiya.webspeak.android.model.ChatMessage
 import com.echosixhiya.webspeak.android.model.ChatScope
 import com.echosixhiya.webspeak.android.model.ConnectionPhase
 import com.echosixhiya.webspeak.android.model.JoinRequest
+import com.echosixhiya.webspeak.android.model.NoiseSuppressionLevel
 import com.echosixhiya.webspeak.android.model.PokeAlert
 import com.echosixhiya.webspeak.android.model.ServerEvent
 import com.echosixhiya.webspeak.android.model.VoiceAudioTransport
@@ -75,12 +77,15 @@ class VoiceSessionService : Service() {
     private var screenShareClient: NativeScreenShareClient? = null
     private var screenShareIceServers: List<PeerConnection.IceServer> = defaultScreenShareIceServers()
     private var pendingScreenShareStartId = ""
+    private var screenShareDiscoveryRefreshJob: Job? = null
     private var connectJob: Job? = null
     private var handshakeTimeoutJob: Job? = null
     private var activeRequest: JoinRequest? = null
     private var generation = 0L
     private var intentionalStop = false
     private var microphoneMuted = false
+    private var noiseSuppressionLevel = NoiseSuppressionLevel.Moderate
+    private var autoGainControlEnabled = true
     private var microphoneCueToneGenerator: ToneGenerator? = null
     private var outputVolume = 1f
     private var lastAudibleOutputVolume = 1f
@@ -108,6 +113,9 @@ class VoiceSessionService : Service() {
             outputVolume.takeIf { it > 0f } ?: DEFAULT_OUTPUT_VOLUME,
         ).coerceIn(0f, 1f).takeIf { it > 0f } ?: DEFAULT_OUTPUT_VOLUME
         speakerEnabled = preferences.getBoolean(KEY_SPEAKER_ENABLED, outputVolume > 0f) && outputVolume > 0f
+        noiseSuppressionLevel = NoiseSuppressionLevel.fromStoredValue(preferences.getString(KEY_NOISE_SUPPRESSION_LEVEL, null))
+        autoGainControlEnabled = preferences.getBoolean(KEY_AUTO_GAIN_CONTROL, true)
+        VoiceInputEffects.configure(noiseSuppressionLevel, autoGainControlEnabled)
         microphoneMuted = VoiceAudioPrivacyPolicy.microphoneMutedAfterSpeakerChange(
             preferences.getBoolean(KEY_MIC_MUTED, false),
             speakerEnabled,
@@ -157,6 +165,8 @@ class VoiceSessionService : Service() {
                         audioReady = false,
                         audioTransport = VoiceAudioTransport.None,
                         microphoneMuted = microphoneMuted,
+                        noiseSuppressionLevel = noiseSuppressionLevel,
+                        autoGainControlEnabled = autoGainControlEnabled,
                         outputVolume = outputVolume,
                         speakerEnabled = speakerEnabled,
                         screenShares = emptyList(),
@@ -171,6 +181,10 @@ class VoiceSessionService : Service() {
 
             ACTION_DISCONNECT -> stopSession()
             ACTION_SET_MICROPHONE_MUTED -> setMutedInternal(intent.getBooleanExtra(EXTRA_MUTED, !microphoneMuted))
+            ACTION_SET_NOISE_SUPPRESSION_LEVEL -> setNoiseSuppressionLevelInternal(
+                NoiseSuppressionLevel.fromStoredValue(intent.getStringExtra(EXTRA_NOISE_SUPPRESSION_LEVEL)),
+            )
+            ACTION_SET_AUTO_GAIN_CONTROL -> setAutoGainControlInternal(intent.getBooleanExtra(EXTRA_ENABLED, autoGainControlEnabled))
             ACTION_TOGGLE_SPEAKER -> setSpeakerEnabledInternal(!speakerEnabled)
             ACTION_SWITCH_CHANNEL -> switchChannelInternal(
                 intent.getStringExtra(EXTRA_CHANNEL_ID).orEmpty(),
@@ -208,6 +222,10 @@ class VoiceSessionService : Service() {
             )
             ACTION_SET_OUTPUT_VOLUME -> setOutputVolumeInternal(intent.getFloatExtra(EXTRA_VOLUME, outputVolume))
             ACTION_LATENCY_PROBE -> sendLatencyProbe()
+            ACTION_REFRESH_SCREEN_SHARES -> {
+                refreshScreenShares("ui")
+                scheduleScreenShareDiscoveryRefresh(generation)
+            }
             ACTION_CLEAR_CHAT_HISTORY -> clearChatHistory()
             ACTION_START_SCREEN_SHARE -> startScreenShare(intent.projectionData())
             ACTION_STOP_SCREEN_SHARE -> stopActiveScreenShare()
@@ -360,7 +378,8 @@ class VoiceSessionService : Service() {
                 sendCommand("setMicrophoneMuted", JSONObject().put("muted", microphoneMuted))
                 if (webrtcAvailable) startNativeVoiceRtc(currentGeneration)
                 else startCompatibilityVoice(currentGeneration, localizedString(R.string.audio_gateway_no_webrtc))
-                sendJson(JSONObject().put("type", "screenShareList"))
+                refreshScreenShares("connected")
+                scheduleScreenShareDiscoveryRefresh(currentGeneration)
                 val identity = message.optString("identity", "")
                 if (request.rememberIdentity && identity.length in 1..8192) runCatching { identityVault.write(identity) }
                 val gatewayKey = historyGatewayKey
@@ -392,6 +411,7 @@ class VoiceSessionService : Service() {
                         away = mergedMembers.firstOrNull { it.id == selfId }?.away ?: previous.away,
                     )
                 }
+                refreshScreenShares("channel-list")
                 updateNotification(localizedString(R.string.notification_voice_connected))
             }
 
@@ -480,7 +500,8 @@ class VoiceSessionService : Service() {
                 VoiceSessionStore.update { previous ->
                     previous.copy(currentChannelId = channelId, pendingChannelId = "", errorCode = "", errorMessage = "")
                 }
-                sendJson(JSONObject().put("type", "screenShareList"))
+                refreshScreenShares("channel-switched")
+                scheduleScreenShareDiscoveryRefresh(currentGeneration)
             }
 
             "whisperTargets" -> {
@@ -577,8 +598,11 @@ class VoiceSessionService : Service() {
                 }
             }
 
-            "screenShareList" -> VoiceSessionStore.update {
-                it.copy(screenShares = parseScreenShares(message.optJSONArray("streams")))
+            "screenShareList" -> {
+                val streams = parseScreenShares(message.optJSONArray("streams"))
+                Log.i(SCREEN_SHARE_LOG_TAG, "list received count=${streams.size}")
+                if (streams.isNotEmpty()) cancelScreenShareDiscoveryRefresh()
+                VoiceSessionStore.update { it.copy(screenShares = streams) }
             }
 
             "screenShareStarted" -> {
@@ -586,6 +610,7 @@ class VoiceSessionService : Service() {
                     parseScreenShares(JSONArray().put(it)).firstOrNull()
                 } ?: return
                 val isOwner = message.optBoolean("owner", false)
+                Log.i(SCREEN_SHARE_LOG_TAG, "stream started source=${stream.source}")
                 if (isOwner) {
                     if (pendingScreenShareStartId.isBlank() || message.optString("requestId") != pendingScreenShareStartId) {
                         sendJson(JSONObject().put("type", "screenShareStop").put("streamId", stream.streamId))
@@ -595,6 +620,7 @@ class VoiceSessionService : Service() {
                     pendingScreenShareStartId = ""
                     screenShareClient?.bindOwnerStream(stream.streamId)
                 }
+                cancelScreenShareDiscoveryRefresh()
                 VoiceSessionStore.update { previous ->
                     previous.copy(
                         screenShares = mergeScreenShares(previous.screenShares, stream),
@@ -690,6 +716,7 @@ class VoiceSessionService : Service() {
 
             "screenShareError" -> {
                 val code = safeCode(message.optString("code"))
+                Log.w(SCREEN_SHARE_LOG_TAG, "gateway reported screen-share error code=$code")
                 val detail = message.optString("message", "屏幕共享操作失败").take(240)
                 if (VoiceSessionStore.state.value.screenShareStarting) {
                     pendingScreenShareStartId = ""
@@ -726,6 +753,8 @@ class VoiceSessionService : Service() {
         lateinit var nativeRtc: NativeVoiceRtc
         nativeRtc = NativeVoiceRtc(
             context = this,
+            noiseSuppressionLevel = noiseSuppressionLevel,
+            autoGainControlEnabled = autoGainControlEnabled,
             sendOffer = { type, sdp, muted ->
                 if (currentGeneration == generation) {
                     val description = JSONObject().put("type", type).put("sdp", sdp)
@@ -788,6 +817,8 @@ class VoiceSessionService : Service() {
         lateinit var transport: CompatibilityVoiceTransport
         transport = CompatibilityVoiceTransport(
             context = this,
+            noiseSuppressionLevel = noiseSuppressionLevel,
+            autoGainControlEnabled = autoGainControlEnabled,
             sendPcmFrame = { frame -> currentGeneration == generation && socket?.send(frame) == true },
             memberVolume = { clientId ->
                 VoiceSessionStore.state.value.members.firstOrNull { it.id == clientId }?.volume?.toFloat() ?: 1f
@@ -931,6 +962,7 @@ class VoiceSessionService : Service() {
     }
 
     private fun closeCurrentTransport(sendStop: Boolean) {
+        cancelScreenShareDiscoveryRefresh()
         if (sendStop) {
             sendJson(JSONObject().put("type", "webrtcStop"))
             val activeStreamId = VoiceSessionStore.state.value.activeScreenShareId
@@ -1153,7 +1185,7 @@ class VoiceSessionService : Service() {
         )
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_voice_notification)
-            .setContentTitle(localizedString(R.string.app_name))
+            .setContentTitle(notificationTitle())
             .setContentText(notificationContent(content))
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -1201,11 +1233,22 @@ class VoiceSessionService : Service() {
 
     private fun notificationContent(fallback: String): String {
         val state = VoiceSessionStore.state.value
-        if (state.phase != ConnectionPhase.Connected || !speakerEnabled || microphoneMuted) return fallback
-        val channelName = state.channels.firstOrNull { it.id == state.currentChannelId }?.name
+        if (state.phase != ConnectionPhase.Connected) return fallback
+        val currentChannel = state.channels.firstOrNull { it.id == state.currentChannelId }
+        val memberCount = currentChannel?.members?.size
+            ?: state.members.count { it.channelId == state.currentChannelId }
+        val microphoneStatus = localizedString(
+            if (microphoneMuted) R.string.notification_microphone_muted else R.string.notification_microphone_on,
+        )
+        return localizedString(R.string.notification_channel_member_mic, memberCount, microphoneStatus)
+    }
+
+    private fun notificationTitle(): String {
+        val state = VoiceSessionStore.state.value
+        return state.channels.firstOrNull { it.id == state.currentChannelId }
+            ?.name
             ?.takeIf { it.isNotBlank() }
-            ?: return fallback
-        return localizedString(R.string.notification_connected_to_channel, channelName)
+            ?: localizedString(R.string.app_name)
     }
 
     private fun setMutedInternal(muted: Boolean) {
@@ -1222,6 +1265,32 @@ class VoiceSessionService : Service() {
         if (stateChanged) playMicrophoneStateCue(muted)
         sendCommand("setMicrophoneMuted", JSONObject().put("muted", muted))
         if (VoiceSessionStore.state.value.phase != ConnectionPhase.Disconnected) updateNotification(currentNotificationText())
+    }
+
+    private fun setNoiseSuppressionLevelInternal(level: NoiseSuppressionLevel) {
+        noiseSuppressionLevel = level
+        applyAudioProcessingSettings()
+    }
+
+    private fun setAutoGainControlInternal(enabled: Boolean) {
+        autoGainControlEnabled = enabled
+        applyAudioProcessingSettings()
+    }
+
+    private fun applyAudioProcessingSettings() {
+        getSharedPreferences(PREFERENCES, MODE_PRIVATE).edit()
+            .putString(KEY_NOISE_SUPPRESSION_LEVEL, noiseSuppressionLevel.name)
+            .putBoolean(KEY_AUTO_GAIN_CONTROL, autoGainControlEnabled)
+            .apply()
+        VoiceInputEffects.configure(noiseSuppressionLevel, autoGainControlEnabled)
+        rtc?.setAudioProcessingSettings(noiseSuppressionLevel, autoGainControlEnabled)
+        compatibilityAudio?.setAudioProcessingSettings(noiseSuppressionLevel, autoGainControlEnabled)
+        VoiceSessionStore.update {
+            it.copy(
+                noiseSuppressionLevel = noiseSuppressionLevel,
+                autoGainControlEnabled = autoGainControlEnabled,
+            )
+        }
     }
 
     private fun playMicrophoneStateCue(muted: Boolean) {
@@ -1364,6 +1433,30 @@ class VoiceSessionService : Service() {
         return runCatching { currentSocket.send(message.toString()) }.getOrDefault(false)
     }
 
+    private fun refreshScreenShares(trigger: String) {
+        if (VoiceSessionStore.state.value.phase != ConnectionPhase.Connected) return
+        val sent = sendJson(JSONObject().put("type", "screenShareList"))
+        Log.d(SCREEN_SHARE_LOG_TAG, "list requested trigger=$trigger sent=$sent")
+    }
+
+    private fun scheduleScreenShareDiscoveryRefresh(expectedGeneration: Long) {
+        cancelScreenShareDiscoveryRefresh()
+        screenShareDiscoveryRefreshJob = serviceScope.launch {
+            for (waitMs in SCREEN_SHARE_DISCOVERY_RETRY_DELAYS_MS) {
+                delay(waitMs)
+                if (expectedGeneration != generation
+                    || VoiceSessionStore.state.value.phase != ConnectionPhase.Connected
+                ) return@launch
+                refreshScreenShares("startup-retry")
+            }
+        }
+    }
+
+    private fun cancelScreenShareDiscoveryRefresh() {
+        screenShareDiscoveryRefreshJob?.cancel()
+        screenShareDiscoveryRefreshJob = null
+    }
+
     private fun isCurrent(expectedGeneration: Long, webSocket: WebSocket): Boolean =
         expectedGeneration == generation && socket === webSocket
 
@@ -1455,6 +1548,8 @@ class VoiceSessionService : Service() {
         private const val NORMAL_CLOSE = 1000
         private const val HANDSHAKE_TIMEOUT_MS = 35_000L
         private const val VOICE_RTC_CONNECTION_TIMEOUT_MS = 15_000L
+        private const val SCREEN_SHARE_LOG_TAG = "WebSpeakScreenShare"
+        private val SCREEN_SHARE_DISCOVERY_RETRY_DELAYS_MS = listOf(2_000L, 4_000L, 9_000L)
         private const val VOICE_AUDIO_STATS_INTERVAL_MS = 2_000L
         private const val VOICE_AUDIO_STATS_TIMEOUT_MS = 1_500L
         private const val VOICE_ACTIVITY_GRACE_MS = 1_800L
@@ -1469,10 +1564,14 @@ class VoiceSessionService : Service() {
         private const val KEY_OUTPUT_VOLUME = "output_volume"
         private const val KEY_LAST_AUDIBLE_OUTPUT_VOLUME = "last_audible_output_volume"
         private const val KEY_SPEAKER_ENABLED = "speaker_enabled"
+        private const val KEY_NOISE_SUPPRESSION_LEVEL = "noise_suppression_level"
+        private const val KEY_AUTO_GAIN_CONTROL = "auto_gain_control"
 
         private const val ACTION_CONNECT = "com.echosixhiya.webspeak.android.action.CONNECT"
         private const val ACTION_DISCONNECT = "com.echosixhiya.webspeak.android.action.DISCONNECT"
         private const val ACTION_SET_MICROPHONE_MUTED = "com.echosixhiya.webspeak.android.action.SET_MICROPHONE_MUTED"
+        private const val ACTION_SET_NOISE_SUPPRESSION_LEVEL = "com.echosixhiya.webspeak.android.action.SET_NOISE_SUPPRESSION_LEVEL"
+        private const val ACTION_SET_AUTO_GAIN_CONTROL = "com.echosixhiya.webspeak.android.action.SET_AUTO_GAIN_CONTROL"
         private const val ACTION_TOGGLE_SPEAKER = "com.echosixhiya.webspeak.android.action.TOGGLE_SPEAKER"
         private const val ACTION_SWITCH_CHANNEL = "com.echosixhiya.webspeak.android.action.SWITCH_CHANNEL"
         private const val ACTION_SEND_TEXT = "com.echosixhiya.webspeak.android.action.SEND_TEXT"
@@ -1484,6 +1583,7 @@ class VoiceSessionService : Service() {
         private const val ACTION_MOVE_MEMBER = "com.echosixhiya.webspeak.android.action.MOVE_MEMBER"
         private const val ACTION_SET_OUTPUT_VOLUME = "com.echosixhiya.webspeak.android.action.SET_OUTPUT_VOLUME"
         private const val ACTION_LATENCY_PROBE = "com.echosixhiya.webspeak.android.action.LATENCY_PROBE"
+        private const val ACTION_REFRESH_SCREEN_SHARES = "com.echosixhiya.webspeak.android.action.REFRESH_SCREEN_SHARES"
         private const val ACTION_CLEAR_CHAT_HISTORY = "com.echosixhiya.webspeak.android.action.CLEAR_CHAT_HISTORY"
         private const val ACTION_START_SCREEN_SHARE = "com.echosixhiya.webspeak.android.action.START_SCREEN_SHARE"
         private const val ACTION_STOP_SCREEN_SHARE = "com.echosixhiya.webspeak.android.action.STOP_SCREEN_SHARE"
@@ -1498,6 +1598,8 @@ class VoiceSessionService : Service() {
         private const val EXTRA_INVITE = "invite"
         private const val EXTRA_REMEMBER_IDENTITY = "rememberIdentity"
         private const val EXTRA_MUTED = "muted"
+        private const val EXTRA_NOISE_SUPPRESSION_LEVEL = "noiseSuppressionLevel"
+        private const val EXTRA_ENABLED = "enabled"
         private const val EXTRA_CHANNEL_ID = "channelId"
         private const val EXTRA_CHANNEL_PASSWORD = "channelPassword"
         private const val EXTRA_SCOPE = "scope"
@@ -1539,6 +1641,15 @@ class VoiceSessionService : Service() {
 
         fun setMicrophoneMuted(context: Context, muted: Boolean) = startCommand(context, ACTION_SET_MICROPHONE_MUTED) {
             putExtra(EXTRA_MUTED, muted)
+        }
+
+        fun setNoiseSuppressionLevel(context: Context, level: NoiseSuppressionLevel) =
+            startCommand(context, ACTION_SET_NOISE_SUPPRESSION_LEVEL) {
+                putExtra(EXTRA_NOISE_SUPPRESSION_LEVEL, level.name)
+            }
+
+        fun setAutoGainControlEnabled(context: Context, enabled: Boolean) = startCommand(context, ACTION_SET_AUTO_GAIN_CONTROL) {
+            putExtra(EXTRA_ENABLED, enabled)
         }
 
         fun switchChannel(context: Context, channelId: String, password: String = "") = startCommand(context, ACTION_SWITCH_CHANNEL) {
@@ -1585,6 +1696,8 @@ class VoiceSessionService : Service() {
         fun toggleSpeaker(context: Context) = startCommand(context, ACTION_TOGGLE_SPEAKER)
 
         fun requestLatency(context: Context) = startCommand(context, ACTION_LATENCY_PROBE)
+
+        fun refreshScreenShares(context: Context) = startCommand(context, ACTION_REFRESH_SCREEN_SHARES)
 
         fun clearChatHistory(context: Context) = startCommand(context, ACTION_CLEAR_CHAT_HISTORY)
 

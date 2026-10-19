@@ -28,6 +28,21 @@ enum class VoiceAudioTransport {
     Compatibility,
 }
 
+enum class NoiseSuppressionLevel(
+    val thresholdMultiplier: Float,
+    val minimumGateGain: Float,
+) {
+    Off(1f, 1f),
+    Light(1.8f, 0.35f),
+    Moderate(2.5f, 0.14f),
+    Strong(3.5f, 0.04f);
+
+    companion object {
+        fun fromStoredValue(value: String?): NoiseSuppressionLevel =
+            entries.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: Moderate
+    }
+}
+
 data class VoiceMember(
     val id: Int,
     val nickname: String,
@@ -122,6 +137,8 @@ data class VoiceSessionState(
     val whisperTargetIds: Set<Int> = emptySet(),
     val whisperActive: Boolean = false,
     val microphoneMuted: Boolean = false,
+    val noiseSuppressionLevel: NoiseSuppressionLevel = NoiseSuppressionLevel.Moderate,
+    val autoGainControlEnabled: Boolean = true,
     val outputVolume: Float = 1f,
     val speakerEnabled: Boolean = true,
     val away: Boolean = false,

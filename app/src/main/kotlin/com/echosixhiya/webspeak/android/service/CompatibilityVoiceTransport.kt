@@ -17,6 +17,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import androidx.core.content.ContextCompat
+import com.echosixhiya.webspeak.android.model.NoiseSuppressionLevel
 import okio.ByteString
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -30,6 +31,8 @@ import kotlin.math.max
  */
 class CompatibilityVoiceTransport(
     context: Context,
+    private var noiseSuppressionLevel: NoiseSuppressionLevel,
+    private var autoGainControlEnabled: Boolean,
     private val sendPcmFrame: (ByteString) -> Boolean,
     private val memberVolume: (Int) -> Float,
     private val outputVolume: () -> Float,
@@ -82,13 +85,17 @@ class CompatibilityVoiceTransport(
                 .build()
             audioRecord = recorder
             check(recorder.state == AudioRecord.STATE_INITIALIZED) { "Android 麦克风录音器初始化失败" }
+            VoiceInputEffects.configure(noiseSuppressionLevel, autoGainControlEnabled)
+            VoiceInputEffects.reset()
             recorder.startRecording()
             check(recorder.recordingState == AudioRecord.RECORDSTATE_RECORDING) { "Android 麦克风没有开始录音" }
             if (AcousticEchoCanceler.isAvailable()) {
                 echoCanceler = AcousticEchoCanceler.create(recorder.audioSessionId)?.apply { enabled = true }
             }
             if (NoiseSuppressor.isAvailable()) {
-                noiseSuppressor = NoiseSuppressor.create(recorder.audioSessionId)?.apply { enabled = true }
+                noiseSuppressor = NoiseSuppressor.create(recorder.audioSessionId)?.apply {
+                    enabled = noiseSuppressionLevel != NoiseSuppressionLevel.Off
+                }
             }
 
             val thread = HandlerThread("WebSpeakCompatibilityAudio").apply { start() }
@@ -108,6 +115,13 @@ class CompatibilityVoiceTransport(
 
     fun setMuted(value: Boolean) {
         muted.set(value)
+    }
+
+    fun setAudioProcessingSettings(noiseSuppressionLevel: NoiseSuppressionLevel, autoGainControlEnabled: Boolean) {
+        this.noiseSuppressionLevel = noiseSuppressionLevel
+        this.autoGainControlEnabled = autoGainControlEnabled
+        VoiceInputEffects.configure(noiseSuppressionLevel, autoGainControlEnabled)
+        runCatching { noiseSuppressor?.enabled = noiseSuppressionLevel != NoiseSuppressionLevel.Off }
     }
 
     fun receive(packet: ByteString) {
@@ -151,6 +165,7 @@ class CompatibilityVoiceTransport(
                     }
                 }
                 if (offset == frame.size && !muted.get()) {
+                    VoiceInputEffects.processPcm16Frame(frame)
                     if (!sendPcmFrame(ByteString.of(*frame))) {
                         reportError("麦克风音频帧未能发送到网关")
                     }

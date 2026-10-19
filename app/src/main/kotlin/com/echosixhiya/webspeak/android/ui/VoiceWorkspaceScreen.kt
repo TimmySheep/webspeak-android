@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -27,12 +29,14 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speaker
 import androidx.compose.material.icons.filled.VolumeOff
@@ -63,6 +67,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -95,6 +100,7 @@ import com.echosixhiya.webspeak.android.model.ChatMessage
 import com.echosixhiya.webspeak.android.model.ChatScope
 import com.echosixhiya.webspeak.android.model.ClientTab
 import com.echosixhiya.webspeak.android.model.ConnectionPhase
+import com.echosixhiya.webspeak.android.model.NoiseSuppressionLevel
 import com.echosixhiya.webspeak.android.model.ServerEvent
 import com.echosixhiya.webspeak.android.model.VoiceAudioTransport
 import com.echosixhiya.webspeak.android.model.VoiceChannel
@@ -119,6 +125,8 @@ fun VoiceWorkspaceScreen(
     onMemberVolume: (Int, Float) -> Unit,
     onMoveMember: (Int, String) -> Unit,
     onOutputVolume: (Float) -> Unit,
+    onNoiseSuppressionLevel: (NoiseSuppressionLevel) -> Unit,
+    onAutoGainControlEnabled: (Boolean) -> Unit,
     onToggleSpeaker: () -> Unit,
     onLatencyProbe: () -> Unit,
     onClearChatHistory: () -> Unit,
@@ -126,6 +134,7 @@ fun VoiceWorkspaceScreen(
     onStopScreenShare: () -> Unit,
     onJoinScreenShare: (String) -> Unit,
     onLeaveScreenShare: (String) -> Unit,
+    onRefreshScreenShares: () -> Unit,
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(ClientTab.Voice) }
     var chatScope by rememberSaveable { mutableStateOf(ChatScope.Channel) }
@@ -144,7 +153,10 @@ fun VoiceWorkspaceScreen(
                         ClientTab.entries.forEach { tab ->
                             NavigationBarItem(
                                 selected = selectedTab == tab,
-                                onClick = { selectedTab = tab },
+                                onClick = {
+                                    selectedTab = tab
+                                    if (tab == ClientTab.Voice) onRefreshScreenShares()
+                                },
                                 icon = { NavigationTabIcon(tab, state.messages.count { !it.isSelf }) },
                                 label = { Text(stringResource(tab.labelResource)) },
                                 alwaysShowLabel = true,
@@ -160,7 +172,10 @@ fun VoiceWorkspaceScreen(
                         ClientTab.entries.forEach { tab ->
                             NavigationRailItem(
                                 selected = selectedTab == tab,
-                                onClick = { selectedTab = tab },
+                                onClick = {
+                                    selectedTab = tab
+                                    if (tab == ClientTab.Voice) onRefreshScreenShares()
+                                },
                                 icon = { NavigationTabIcon(tab, state.messages.count { !it.isSelf }) },
                                 label = { Text(stringResource(tab.labelResource)) },
                                 alwaysShowLabel = true,
@@ -175,6 +190,7 @@ fun VoiceWorkspaceScreen(
                             currentChannel = currentChannel,
                             onToggleMicrophone = onToggleMicrophone,
                             onToggleSpeaker = onToggleSpeaker,
+                            onDisconnect = onDisconnect,
                             onSetAway = onSetAway,
                             onSwitchToChannels = { selectedTab = ClientTab.Channels },
                             onWhisperActive = onWhisperActive,
@@ -191,6 +207,7 @@ fun VoiceWorkspaceScreen(
                             onStartScreenShare = { confirmScreenShare = true },
                             onStopScreenShare = onStopScreenShare,
                             onJoinScreenShare = onJoinScreenShare,
+                            onRefreshScreenShares = onRefreshScreenShares,
                         )
                         ClientTab.Channels -> ChannelsContent(
                             channels = state.channels,
@@ -227,6 +244,8 @@ fun VoiceWorkspaceScreen(
                             onSetAway = onSetAway,
                             onDisconnect = onDisconnect,
                             onOutputVolume = onOutputVolume,
+                            onNoiseSuppressionLevel = onNoiseSuppressionLevel,
+                            onAutoGainControlEnabled = onAutoGainControlEnabled,
                             onLatencyProbe = onLatencyProbe,
                             onClearChatHistory = onClearChatHistory,
                         )
@@ -285,12 +304,20 @@ private val ClientTab.labelResource: Int
         ClientTab.Settings -> R.string.tab_settings
     }
 
+private fun NoiseSuppressionLevel.labelResource(): Int = when (this) {
+    NoiseSuppressionLevel.Off -> R.string.settings_noise_level_off
+    NoiseSuppressionLevel.Light -> R.string.settings_noise_level_light
+    NoiseSuppressionLevel.Moderate -> R.string.settings_noise_level_moderate
+    NoiseSuppressionLevel.Strong -> R.string.settings_noise_level_strong
+}
+
 @Composable
 private fun VoiceHomeContent(
     state: VoiceSessionState,
     currentChannel: VoiceChannel?,
     onToggleMicrophone: () -> Unit,
     onToggleSpeaker: () -> Unit,
+    onDisconnect: () -> Unit,
     onSetAway: (Boolean) -> Unit,
     onSwitchToChannels: () -> Unit,
     onWhisperActive: (Boolean) -> Unit,
@@ -303,6 +330,7 @@ private fun VoiceHomeContent(
     onStartScreenShare: () -> Unit,
     onStopScreenShare: () -> Unit,
     onJoinScreenShare: (String) -> Unit,
+    onRefreshScreenShares: () -> Unit,
 ) {
     val currentMembers = currentChannel?.members?.ifEmpty { state.members } ?: state.members
     LazyColumn(
@@ -350,8 +378,8 @@ private fun VoiceHomeContent(
                                 contentDescription = stringResource(if (state.microphoneMuted) R.string.action_unmute else R.string.action_mute),
                             )
                         }
-                        FilledTonalIconButton(onClick = onSwitchToChannels, modifier = Modifier.size(52.dp)) {
-                            Icon(Icons.Filled.Groups, contentDescription = stringResource(R.string.action_switch_channel))
+                        FilledTonalIconButton(onClick = onDisconnect, modifier = Modifier.size(52.dp)) {
+                            Icon(Icons.Filled.ExitToApp, contentDescription = stringResource(R.string.action_leave_voice_channel))
                         }
                         FilledTonalIconButton(onClick = { onSetAway(!state.away) }, modifier = Modifier.size(52.dp)) {
                             Icon(
@@ -434,11 +462,21 @@ private fun VoiceHomeContent(
                                  color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(
+                            onClick = onRefreshScreenShares,
+                            enabled = state.phase == ConnectionPhase.Connected,
+                        ) {
+                            Icon(Icons.Filled.Refresh, contentDescription = null)
+                            Spacer(Modifier.width(4.dp))
+                            Text(stringResource(R.string.action_refresh_screen_shares))
+                        }
                         Button(
                             enabled = state.phase == ConnectionPhase.Connected,
                             onClick = if (state.activeScreenShareId.isNotBlank() || state.screenShareStarting) onStopScreenShare else onStartScreenShare,
                         ) {
-                             Text(stringResource(if (state.activeScreenShareId.isNotBlank() || state.screenShareStarting) R.string.action_stop else R.string.action_start))
+                            Text(stringResource(if (state.activeScreenShareId.isNotBlank() || state.screenShareStarting) R.string.action_stop else R.string.action_start))
                         }
                     }
                     if (state.screenShareError.isNotBlank()) {
@@ -868,6 +906,8 @@ private fun SettingsContent(
     onSetAway: (Boolean) -> Unit,
     onDisconnect: () -> Unit,
     onOutputVolume: (Float) -> Unit,
+    onNoiseSuppressionLevel: (NoiseSuppressionLevel) -> Unit,
+    onAutoGainControlEnabled: (Boolean) -> Unit,
     onLatencyProbe: () -> Unit,
     onClearChatHistory: () -> Unit,
 ) {
@@ -907,6 +947,51 @@ private fun SettingsContent(
                         }
                     }
                     Slider(value = state.outputVolume, onValueChange = onOutputVolume, valueRange = 0f..1f)
+                }
+            }
+        }
+        item {
+            Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
+                Column(Modifier.fillMaxWidth().padding(17.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.settings_noise_suppression), fontWeight = FontWeight.SemiBold)
+                    Text(
+                        stringResource(R.string.settings_noise_suppression_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        NoiseSuppressionLevel.entries.forEach { level ->
+                            FilterChip(
+                                selected = state.noiseSuppressionLevel == level,
+                                onClick = { onNoiseSuppressionLevel(level) },
+                                label = { Text(stringResource(level.labelResource())) },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 17.dp, vertical = 13.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text(stringResource(R.string.settings_auto_gain_control), fontWeight = FontWeight.SemiBold)
+                        Text(
+                            stringResource(R.string.settings_auto_gain_control_description),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = state.autoGainControlEnabled,
+                        onCheckedChange = onAutoGainControlEnabled,
+                    )
                 }
             }
         }

@@ -8,6 +8,7 @@ import android.media.MediaRecorder
 import android.os.Build
 import android.os.SystemClock
 import android.util.Log
+import com.echosixhiya.webspeak.android.model.NoiseSuppressionLevel
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeoutOrNull
 import org.webrtc.AudioSource
@@ -36,6 +37,8 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 /** Native libwebrtc client for the gateway's single mixed voice track. */
 class NativeVoiceRtc(
     context: Context,
+    private var noiseSuppressionLevel: NoiseSuppressionLevel,
+    private var autoGainControlEnabled: Boolean,
     private val sendOffer: (type: String, sdp: String, muted: Boolean) -> Unit,
     private val onConnectionState: (String) -> Unit,
 ) {
@@ -108,6 +111,13 @@ class NativeVoiceRtc(
         localAudioTrack?.setEnabled(!value)
     }
 
+    fun setAudioProcessingSettings(noiseSuppressionLevel: NoiseSuppressionLevel, autoGainControlEnabled: Boolean) {
+        this.noiseSuppressionLevel = noiseSuppressionLevel
+        this.autoGainControlEnabled = autoGainControlEnabled
+        VoiceInputEffects.configure(noiseSuppressionLevel, autoGainControlEnabled)
+        audioModule?.setNoiseSuppressorEnabled(noiseSuppressionLevel != NoiseSuppressionLevel.Off)
+    }
+
     fun setOutputVolume(value: Double) {
         outputVolume = value.coerceIn(0.0, 1.0)
         remoteAudioTrack?.setVolume(outputVolume)
@@ -167,10 +177,12 @@ class NativeVoiceRtc(
 
     private fun initializeFactory() {
         NativeWebRtcRuntime.initialize(appContext)
+        VoiceInputEffects.configure(noiseSuppressionLevel, autoGainControlEnabled)
+        VoiceInputEffects.reset()
 
         val module = JavaAudioDeviceModule.builder(appContext)
             .setUseHardwareAcousticEchoCanceler(true)
-            .setUseHardwareNoiseSuppressor(true)
+            .setUseHardwareNoiseSuppressor(noiseSuppressionLevel != NoiseSuppressionLevel.Off)
             .setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
             .setAudioFormat(AudioFormat.ENCODING_PCM_16BIT)
             .setSamplesReadyCallback { samples ->
@@ -187,6 +199,7 @@ class NativeVoiceRtc(
         eglBase = egl
         factory = PeerConnectionFactory.builder()
             .setAudioDeviceModule(module)
+            .setAudioProcessingFactory(NativeVoiceAudioProcessing.factory)
             .setVideoEncoderFactory(DefaultVideoEncoderFactory(egl.eglBaseContext, true, true))
             .setVideoDecoderFactory(DefaultVideoDecoderFactory(egl.eglBaseContext))
             .createPeerConnectionFactory()

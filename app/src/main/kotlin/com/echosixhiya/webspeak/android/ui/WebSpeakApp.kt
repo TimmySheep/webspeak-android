@@ -94,6 +94,8 @@ fun WebSpeakApp() {
                 onMemberVolume = { clientId, volume -> VoiceSessionService.setMemberVolume(context, clientId, volume) },
                 onMoveMember = { clientId, channelId -> VoiceSessionService.moveMember(context, clientId, channelId) },
                 onOutputVolume = { volume -> VoiceSessionService.setOutputVolume(context, volume) },
+                onNoiseSuppressionLevel = { level -> VoiceSessionService.setNoiseSuppressionLevel(context, level) },
+                onAutoGainControlEnabled = { enabled -> VoiceSessionService.setAutoGainControlEnabled(context, enabled) },
                 onToggleSpeaker = { VoiceSessionService.toggleSpeaker(context) },
                 onLatencyProbe = { VoiceSessionService.requestLatency(context) },
                 onClearChatHistory = { VoiceSessionService.clearChatHistory(context) },
@@ -101,6 +103,7 @@ fun WebSpeakApp() {
                 onStopScreenShare = { VoiceSessionService.stopScreenShare(context) },
                 onJoinScreenShare = { streamId -> VoiceSessionService.joinScreenShare(context, streamId) },
                 onLeaveScreenShare = { streamId -> VoiceSessionService.leaveScreenShare(context, streamId) },
+                onRefreshScreenShares = { VoiceSessionService.refreshScreenShares(context) },
             )
 
             else -> ConnectionScreen(

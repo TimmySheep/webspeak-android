@@ -17,6 +17,10 @@
     <string name="notification_voice_connecting">Connecting to voice server</string>
     <string name="notification_voice_connected">Voice session is active</string>
     <string name="notification_connected_to_channel">Connected to %1$s channel</string>
+    <string name="notification_channel_member_mic">%1$d members · %2$s</string>
+    <string name="notification_microphone_on">Microphone on</string>
+    <string name="notification_microphone_muted">Microphone muted</string>
+    <string name="action_leave_voice_channel">Leave voice channel</string>
     <string name="notification_disconnect">Disconnect</string>
     <string name="notification_mute">Mute</string>
     <string name="notification_unmute">Unmute</string>
@@ -63,6 +67,7 @@
     <string name="empty_no_members_title">No members yet</string>
     <string name="empty_no_members_message">Members will appear here when they join the channel.</string>
     <string name="screen_share_title">Screen sharing</string>
+    <string name="action_refresh_screen_shares">Refresh shares</string>
     <string name="screen_share_you_are_sharing">You are sharing your screen</string>
     <string name="screen_share_watching">Watching a screen share</string>
     <string name="action_stop">Stop</string>
@@ -126,6 +131,14 @@
     <string name="settings_enable">Enable</string>
     <string name="settings_output_volume">Voice playback volume</string>
     <string name="settings_output_muted">Voice playback is off</string>
+    <string name="settings_noise_suppression">Microphone noise reduction</string>
+    <string name="settings_noise_suppression_description">Higher levels reduce more low-level background noise, but may also soften quiet speech and word endings.</string>
+    <string name="settings_noise_level_off">Off</string>
+    <string name="settings_noise_level_light">Light</string>
+    <string name="settings_noise_level_moderate">Medium</string>
+    <string name="settings_noise_level_strong">Strong</string>
+    <string name="settings_auto_gain_control">Automatic gain control</string>
+    <string name="settings_auto_gain_control_description">Automatically boosts quieter microphone input for steadier voice volume.</string>
     <string name="settings_away_title">Away status</string>
     <string name="settings_currently_away">Your status is Away</string>
     <string name="settings_currently_online">Your status is Online</string>

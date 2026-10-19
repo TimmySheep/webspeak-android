@@ -17,6 +17,10 @@
     <string name="notification_voice_connecting">正在连接语音服务器</string>
     <string name="notification_voice_connected">语音连接已保持</string>
     <string name="notification_connected_to_channel">已连接到%1$s频道</string>
+    <string name="notification_channel_member_mic">%1$d 位成员 · %2$s</string>
+    <string name="notification_microphone_on">麦克风开启</string>
+    <string name="notification_microphone_muted">麦克风已静音</string>
+    <string name="action_leave_voice_channel">离开语音频道</string>
     <string name="notification_disconnect">断开</string>
     <string name="notification_mute">静音</string>
     <string name="notification_unmute">取消静音</string>
@@ -69,6 +73,7 @@
     <string name="empty_no_members_title">还没有成员</string>
     <string name="empty_no_members_message">频道成员连接后会显示在这里。</string>
     <string name="screen_share_title">屏幕共享</string>
+    <string name="action_refresh_screen_shares">刷新共享列表</string>
     <string name="screen_share_you_are_sharing">你正在共享屏幕</string>
     <string name="screen_share_watching">正在观看屏幕共享</string>
     <string name="action_stop">停止</string>
@@ -137,6 +142,14 @@
     <string name="settings_enable">开启</string>
     <string name="settings_output_volume">语音播放音量</string>
     <string name="settings_output_muted">语音播放已关闭</string>
+    <string name="settings_noise_suppression">麦克风降噪</string>
+    <string name="settings_noise_suppression_description">档位越高，对低音量背景声的抑制越强；强档也可能压低轻声和尾音。</string>
+    <string name="settings_noise_level_off">关闭</string>
+    <string name="settings_noise_level_light">轻</string>
+    <string name="settings_noise_level_moderate">中</string>
+    <string name="settings_noise_level_strong">强</string>
+    <string name="settings_auto_gain_control">自动增益控制</string>
+    <string name="settings_auto_gain_control_description">自动补偿较小的麦克风输入音量，让通话音量更稳定。</string>
     <string name="settings_away_title">离开状态</string>
     <string name="settings_currently_away">当前显示为离开</string>
     <string name="settings_currently_online">当前显示为在线</string>

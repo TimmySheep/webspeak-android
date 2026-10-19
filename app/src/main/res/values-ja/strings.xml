@@ -17,6 +17,10 @@
     <string name="notification_voice_connecting">音声サーバーに接続中</string>
     <string name="notification_voice_connected">音声セッションを維持中</string>
     <string name="notification_connected_to_channel">%1$sチャンネルに接続しました</string>
+    <string name="notification_channel_member_mic">%1$d 人 · %2$s</string>
+    <string name="notification_microphone_on">マイクオン</string>
+    <string name="notification_microphone_muted">マイクミュート</string>
+    <string name="action_leave_voice_channel">音声チャンネルを退出</string>
     <string name="notification_disconnect">切断</string>
     <string name="notification_mute">ミュート</string>
     <string name="notification_unmute">ミュート解除</string>
@@ -62,6 +66,7 @@
     <string name="empty_no_members_title">メンバーはいません</string>
     <string name="empty_no_members_message">メンバーがチャンネルに参加するとここに表示されます。</string>
     <string name="screen_share_title">画面共有</string>
+    <string name="action_refresh_screen_shares">共有を更新</string>
     <string name="screen_share_you_are_sharing">画面を共有中です</string>
     <string name="screen_share_watching">画面共有を視聴中</string>
     <string name="action_stop">停止</string>
@@ -118,6 +123,14 @@
     <string name="chat_scope_events">イベント</string>
     <string name="label_you">自分</string>
     <string name="settings_voice_title">音声設定</string>
+    <string name="settings_noise_suppression">マイクのノイズ抑制</string>
+    <string name="settings_noise_suppression_description">レベルが高いほど小さな環境音を抑えますが、小さな声や語尾も弱くなる場合があります。</string>
+    <string name="settings_noise_level_off">オフ</string>
+    <string name="settings_noise_level_light">弱</string>
+    <string name="settings_noise_level_moderate">中</string>
+    <string name="settings_noise_level_strong">強</string>
+    <string name="settings_auto_gain_control">自動ゲイン調整</string>
+    <string name="settings_auto_gain_control_description">小さなマイク入力を自動で補正し、音量を安定させます。</string>
     <string name="settings_unmute_microphone">マイクのミュートを解除</string>
     <string name="settings_mute_microphone">マイクをミュート</string>
     <string name="settings_foreground_service">音声セッションはAndroidのフォアグラウンドサービスで維持されます</string>

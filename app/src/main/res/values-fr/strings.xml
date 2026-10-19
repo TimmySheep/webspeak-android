@@ -17,6 +17,10 @@
     <string name="notification_voice_connecting">Connexion au serveur vocal</string>
     <string name="notification_voice_connected">Session vocale active</string>
     <string name="notification_connected_to_channel">Connecté au canal %1$s</string>
+    <string name="notification_channel_member_mic">%1$d membres · %2$s</string>
+    <string name="notification_microphone_on">Micro activé</string>
+    <string name="notification_microphone_muted">Micro coupé</string>
+    <string name="action_leave_voice_channel">Quitter le canal vocal</string>
     <string name="notification_disconnect">Déconnecter</string>
     <string name="notification_mute">Couper le micro</string>
     <string name="notification_unmute">Réactiver le micro</string>
@@ -62,6 +66,7 @@
     <string name="empty_no_members_title">Aucun membre pour le moment</string>
     <string name="empty_no_members_message">Les membres apparaîtront ici lorsqu’ils rejoindront le canal.</string>
     <string name="screen_share_title">Partage d’écran</string>
+    <string name="action_refresh_screen_shares">Actualiser les partages</string>
     <string name="screen_share_you_are_sharing">Vous partagez votre écran</string>
     <string name="screen_share_watching">Vous regardez un partage d’écran</string>
     <string name="action_stop">Arrêter</string>
@@ -118,6 +123,14 @@
     <string name="chat_scope_events">Événements</string>
     <string name="label_you">Vous</string>
     <string name="settings_voice_title">Paramètres vocaux</string>
+    <string name="settings_noise_suppression">Réduction du bruit du microphone</string>
+    <string name="settings_noise_suppression_description">Un niveau élevé réduit davantage les bruits de fond faibles, mais peut aussi atténuer les voix douces et les fins de mots.</string>
+    <string name="settings_noise_level_off">Désactivée</string>
+    <string name="settings_noise_level_light">Légère</string>
+    <string name="settings_noise_level_moderate">Moyenne</string>
+    <string name="settings_noise_level_strong">Forte</string>
+    <string name="settings_auto_gain_control">Gain automatique</string>
+    <string name="settings_auto_gain_control_description">Renforce automatiquement les entrées faibles du microphone pour stabiliser le volume de la voix.</string>
     <string name="settings_unmute_microphone">Réactiver le micro</string>
     <string name="settings_mute_microphone">Couper le micro</string>
     <string name="settings_foreground_service">Les sessions vocales utilisent un service de premier plan Android</string>
