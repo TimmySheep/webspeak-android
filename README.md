@@ -1,4 +1,19 @@
-# WebSpeak Android
+<!--readme-header-->
+<p align="center">
+  <img src="app/src/main/res/drawable-nodpi/webspeak_browser_icon.png" width="128" alt="WebSpeak Android icon">
+</p>
+
+<h1 align="center">WebSpeak Android</h1>
+
+<p align="center">
+  <b>WebSpeak 的原生 Android 客户端</b><br>
+  <sub>Native Android client for WebSpeak</sub>
+</p>
+
+<p align="center"><img alt="platform" src="https://img.shields.io/badge/platform-Android-3DDC84?logo=android&logoColor=white"><img alt="license" src="https://img.shields.io/github/license/TimmySheep/webspeak-android?label=license&color=orange"></p>
+
+---
+<!--/readme-header-->
 
 WebSpeak 的原生 Android 客户端。使用 Kotlin、Jetpack Compose 和 Material 3；复用 WebSpeak 网关的 join-ticket、WebSocket 控制协议与 WebRTC 语音/屏幕共享信令。
 
